@@ -1,0 +1,10 @@
+[package]
+name = "wui-rs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eyre = "0.6.12"
+tokio = { version = "1.45.1", features = ["full"] }
+smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
+wgpu = "25.0.2"
