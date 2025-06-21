@@ -1,4 +1,4 @@
-use crate::application::Backend;
+use crate::application::wayland::Wayland;
 
 use smithay_client_toolkit::{
     delegate_seat,
@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     seat::{Capability, SeatHandler, SeatState},
 };
 
-delegate_seat!(Backend);
+delegate_seat!(Wayland);
 
-impl SeatHandler for Backend {
+impl SeatHandler for Wayland {
     fn seat_state(&mut self) -> &mut SeatState {
         &mut self.seat_state
     }

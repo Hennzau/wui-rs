@@ -1,4 +1,4 @@
-use crate::application::Backend;
+use crate::application::wayland::Wayland;
 
 use smithay_client_toolkit::{
     delegate_layer,
@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
 };
 
-delegate_layer!(Backend);
+delegate_layer!(Wayland);
 
-impl LayerShellHandler for Backend {
+impl LayerShellHandler for Wayland {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {}
 
     fn configure(

@@ -1,4 +1,4 @@
-use crate::application::Backend;
+use crate::application::wayland::Wayland;
 
 use smithay_client_toolkit::{
     delegate_keyboard,
@@ -9,9 +9,9 @@ use smithay_client_toolkit::{
     seat::keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers, RawModifiers},
 };
 
-delegate_keyboard!(Backend);
+delegate_keyboard!(Wayland);
 
-impl KeyboardHandler for Backend {
+impl KeyboardHandler for Wayland {
     fn enter(
         &mut self,
         _: &Connection,

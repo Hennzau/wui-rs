@@ -1,4 +1,4 @@
-use crate::application::Backend;
+use crate::application::wayland::Wayland;
 
 use smithay_client_toolkit::{
     compositor::CompositorHandler,
@@ -12,9 +12,9 @@ use smithay_client_toolkit::{
     },
 };
 
-delegate_compositor!(Backend);
+delegate_compositor!(Wayland);
 
-impl CompositorHandler for Backend {
+impl CompositorHandler for Wayland {
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,

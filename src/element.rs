@@ -1,11 +1,21 @@
-pub struct Element<T> {
-    _phantom: std::marker::PhantomData<T>,
+mod button;
+mod container;
+mod square;
+mod text;
+
+pub use button::*;
+pub use container::*;
+pub use square::*;
+pub use text::*;
+
+pub struct Element<M: Send + Sync + 'static> {
+    _marker: std::marker::PhantomData<M>,
 }
 
-impl<T> Element<T> {
+impl<M: Send + Sync + 'static> Element<M> {
     pub fn none() -> Self {
         Element {
-            _phantom: std::marker::PhantomData,
+            _marker: std::marker::PhantomData,
         }
     }
 }
