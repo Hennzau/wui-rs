@@ -1,4 +1,4 @@
-use crate::application::wayland::Wayland;
+use crate::prelude::*;
 
 use smithay_client_toolkit::{
     delegate_output,
@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     reexports::client::{Connection, QueueHandle, protocol::wl_output::WlOutput},
 };
 
-delegate_output!(Wayland);
+delegate_output!(State);
 
-impl OutputHandler for Wayland {
+impl OutputHandler for State {
     fn output_state(&mut self) -> &mut OutputState {
         &mut self.output_state
     }

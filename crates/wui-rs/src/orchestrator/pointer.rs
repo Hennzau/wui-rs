@@ -1,4 +1,4 @@
-use crate::application::wayland::Wayland;
+use crate::prelude::*;
 
 use smithay_client_toolkit::{
     delegate_pointer,
@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     seat::pointer::{PointerEvent, PointerHandler},
 };
 
-delegate_pointer!(Wayland);
+delegate_pointer!(State);
 
-impl PointerHandler for Wayland {
+impl PointerHandler for State {
     fn pointer_frame(
         &mut self,
         _conn: &Connection,

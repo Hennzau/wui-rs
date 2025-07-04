@@ -1,10 +1,28 @@
-[package]
-name = "wui-rs"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["crates/wui-rs"]
+resolver = "3"
 
-[dependencies]
+[workspace.package]
+authors = ["Enzo Le Van <dev@enzo-le-van.fr>"]
+description = "Wayland GUI library for Rust, built on top of wgpu and smithay-client-toolkit with an ELM architecture."
+edition = "2024"
+homepage = "https://github.com/Hennzau/wui-rs"
+keywords = []
+readme = "README.md"
+rust-version = "1.86.0"
+categories = []
+documentation = "https://github.com/Hennzau/wui-rs"
+license = "Apache-2.0"
+repository = "https://github.com/Hennzau/wui-rs"
+version = "0.1.0"
+
+[workspace.dependencies]
 eyre = "0.6.12"
-tokio = { version = "1.45.1", features = ["full"] }
-smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
 wgpu = "25.0.2"
+tokio = { version = "1.46.0", features = ["full"] }
+
+raw-window-handle = "0.6.0"
+
+smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
+wayland-client = "0.31.1"
+wayland-backend = { version = "0.3.0", features = ["client_system"] }

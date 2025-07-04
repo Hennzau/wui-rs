@@ -1,4 +1,4 @@
-use crate::application::wayland::Wayland;
+use crate::prelude::*;
 
 use smithay_client_toolkit::{
     delegate_seat,
@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     seat::{Capability, SeatHandler, SeatState},
 };
 
-delegate_seat!(Wayland);
+delegate_seat!(State);
 
-impl SeatHandler for Wayland {
+impl SeatHandler for State {
     fn seat_state(&mut self) -> &mut SeatState {
         &mut self.seat_state
     }
