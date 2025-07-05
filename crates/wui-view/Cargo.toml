@@ -1,5 +1,5 @@
 [package]
-name = "wui-rs"
+name = "wui-view"
 authors.workspace = true
 description.workspace = true
 edition.workspace = true
@@ -14,3 +14,11 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
+eyre = { workspace = true }
+wgpu = { workspace = true }
+tokio = { workspace = true }
+raw-window-handle = { workspace = true }
+
+smithay-client-toolkit = { workspace = true }
+wayland-client = { workspace = true }
+wayland-backend = { workspace = true }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wui-rs"]
+members = ["crates/tedst", "crates/wui-renderer", "crates/wui-rs", "crates/wui-view"]
 resolver = "3"
 
 [workspace.package]

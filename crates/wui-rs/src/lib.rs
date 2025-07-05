@@ -1,9 +1,14 @@
-pub mod orchestrator;
-pub mod view;
+pub fn add(left: u64, right: u64) -> u64 {
+    left + right
+}
 
-pub mod prelude {
-    pub use eyre::{Report, Result};
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    pub use crate::orchestrator::*;
-    pub use crate::view::*;
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
+    }
 }

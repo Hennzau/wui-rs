@@ -1,9 +1,11 @@
 use smithay_client_toolkit::shell::xdg::window::WindowDecorations;
-use wui_rs::prelude::*;
+use tedst::prelude::*;
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let mut orchestrator = Orchestrator::new()?;
+
+    let start = tokio::time::Instant::now();
 
     let _view = orchestrator
         .create_layer(ViewConfiguration {
@@ -14,6 +16,10 @@ async fn main() -> eyre::Result<()> {
         })
         .await?;
 
+    let duration = start.elapsed();
+    println!("Layer created in: {:?}", duration);
+
+    let start = tokio::time::Instant::now();
     let _view = orchestrator
         .create_layer(ViewConfiguration {
             anchor: Anchor::BOTTOM,
@@ -22,6 +28,10 @@ async fn main() -> eyre::Result<()> {
             ..Default::default()
         })
         .await?;
+    let duration = start.elapsed();
+    println!("Layer created in: {:?}", duration);
+
+    // let start = tokio::time::Instant::now();
 
     // let _view = orchestrator
     //     .create_window(ViewConfiguration {
@@ -32,6 +42,8 @@ async fn main() -> eyre::Result<()> {
     //         ..Default::default()
     //     })
     //     .await?;
+    // let duration = start.elapsed();
+    // println!("Window created in: {:?}", duration);
 
     orchestrator.run().await
 }

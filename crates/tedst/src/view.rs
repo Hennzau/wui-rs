@@ -119,7 +119,9 @@ impl View {
         match event {
             ViewEvent::Configure(configure) => self.configure(configure),
             ViewEvent::KeyboardEnter(_) => println!("Keyboard entered view: {}", self.id()),
-
+            ViewEvent::Closed => {
+                println!("View closed: {}", self.id());
+            }
             _ => {}
         }
 

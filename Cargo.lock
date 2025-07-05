@@ -1030,6 +1030,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "tedst"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "raw-window-handle",
+ "smithay-client-toolkit",
+ "tokio",
+ "wayland-backend",
+ "wayland-client",
+ "wgpu",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1715,7 +1728,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
+name = "wui-renderer"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "tokio",
+ "wgpu",
+]
+
+[[package]]
 name = "wui-rs"
+version = "0.1.0"
+
+[[package]]
+name = "wui-view"
 version = "0.1.0"
 dependencies = [
  "eyre",
