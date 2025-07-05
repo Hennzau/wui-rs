@@ -23,14 +23,15 @@ async fn main() -> eyre::Result<()> {
         })
         .await?;
 
-    let _view = orchestrator
-        .create_window(ViewConfiguration {
-            decorations: WindowDecorations::ServerDefault,
-            title: String::from("wui_rs"),
-            app_id: String::from("io.github.wui_rs"),
-            ..Default::default()
-        })
-        .await?;
+    // let _view = orchestrator
+    //     .create_window(ViewConfiguration {
+    //         decorations: WindowDecorations::ServerDefault,
+    //         title: String::from("wui_rs"),
+    //         app_id: String::from("io.github.wui_rs"),
+    //         min_size: Some((1920 / 2, 1080 / 2)),
+    //         ..Default::default()
+    //     })
+    //     .await?;
 
     orchestrator.run().await
 }

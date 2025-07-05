@@ -23,7 +23,6 @@ impl SeatHandler for State {
         capability: Capability,
     ) {
         if capability == Capability::Keyboard && self.keyboard.is_none() {
-            println!("Set keyboard capability");
             let keyboard = self
                 .seat_state
                 .get_keyboard(qh, &seat, None)
@@ -32,7 +31,6 @@ impl SeatHandler for State {
         }
 
         if capability == Capability::Pointer && self.pointer.is_none() {
-            println!("Set pointer capability");
             let pointer = self
                 .seat_state
                 .get_pointer(qh, &seat)
@@ -49,12 +47,11 @@ impl SeatHandler for State {
         capability: Capability,
     ) {
         if capability == Capability::Keyboard && self.keyboard.is_some() {
-            println!("Unset keyboard capability");
             self.keyboard.take().unwrap().release();
         }
 
         if capability == Capability::Pointer && self.pointer.is_some() {
-            println!("Unset pointer capability");
+            println!("Pointer released");
             self.pointer.take().unwrap().release();
         }
     }

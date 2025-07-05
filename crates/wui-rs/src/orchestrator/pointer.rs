@@ -5,6 +5,7 @@ use smithay_client_toolkit::{
     reexports::client::{Connection, QueueHandle, protocol::wl_pointer::WlPointer},
     seat::pointer::{PointerEvent, PointerHandler},
 };
+use wayland_client::Proxy;
 
 delegate_pointer!(State);
 
@@ -14,7 +15,15 @@ impl PointerHandler for State {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         _pointer: &WlPointer,
-        _events: &[PointerEvent],
+        events: &[PointerEvent],
     ) {
+        for event in events {
+            if let Err(e) = self.sender.send(StateEvent {
+                event: ViewEvent::PointerFrame(event.clone()),
+                view_id: Some(event.surface.id()),
+            }) {
+                eprintln!("Failed to send pointer frame event: {}", e);
+            }
+        }
     }
 }

@@ -11,6 +11,7 @@ use smithay_client_toolkit::{
         },
     },
 };
+use wayland_client::Proxy;
 
 delegate_compositor!(State);
 
@@ -19,29 +20,45 @@ impl CompositorHandler for State {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &WlSurface,
-        _new_factor: i32,
+        surface: &WlSurface,
+        new_factor: i32,
     ) {
-        // Not needed for this example.
+        if let Err(e) = self.sender.send(StateEvent {
+            event: ViewEvent::ScaleFactorChanged(new_factor),
+            view_id: Some(surface.id()),
+        }) {
+            eprintln!("Failed to send scale factor change event: {}", e);
+        }
     }
 
     fn transform_changed(
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &WlSurface,
-        _new_transform: Transform,
+        surface: &WlSurface,
+        new_transform: Transform,
     ) {
-        // Not needed for this example.
+        if let Err(e) = self.sender.send(StateEvent {
+            event: ViewEvent::TransformChanged(new_transform),
+            view_id: Some(surface.id()),
+        }) {
+            eprintln!("Failed to send transform change event: {}", e);
+        }
     }
 
     fn frame(
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &WlSurface,
-        _time: u32,
+        surface: &WlSurface,
+        time: u32,
     ) {
+        if let Err(e) = self.sender.send(StateEvent {
+            event: ViewEvent::Frame(time),
+            view_id: Some(surface.id()),
+        }) {
+            eprintln!("Failed to send frame event: {}", e);
+        }
     }
 
     fn surface_enter(

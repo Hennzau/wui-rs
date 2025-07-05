@@ -8,7 +8,7 @@ pub mod window;
 
 use crate::prelude::*;
 
-use std::{collections::HashMap, ptr::NonNull, time::Duration};
+use std::{collections::HashMap, ptr::NonNull};
 
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
@@ -23,6 +23,7 @@ use smithay_client_toolkit::{
     shell::{WaylandSurface, wlr_layer::LayerShell, xdg::XdgShell},
 };
 
+use tokio::task::JoinHandle;
 use wayland_backend::client::ObjectId;
 use wayland_client::{
     Connection, EventQueue, Proxy, QueueHandle,
@@ -33,8 +34,19 @@ use wgpu::Instance;
 
 pub use smithay_client_toolkit::shell::wlr_layer::{Anchor, KeyboardInteractivity, Layer};
 
+pub(crate) struct StateEvent {
+    event: ViewEvent,
+    view_id: Option<ObjectId>,
+}
+
+type StateEventReceiver = tokio::sync::mpsc::UnboundedReceiver<StateEvent>;
+type StateEventSender = tokio::sync::mpsc::UnboundedSender<StateEvent>;
+
 pub struct Orchestrator {
     state: State,
+
+    receiver: StateEventReceiver,
+
     event_queue: EventQueue<State>,
 
     instance: Instance,
@@ -44,11 +56,13 @@ pub struct Orchestrator {
 
 impl Orchestrator {
     pub fn new() -> Result<Self> {
+        let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+
         let conn = Connection::connect_to_env()?;
 
         let (globals, event_queue) = registry_queue_init::<State>(&conn)?;
         let qh = event_queue.handle();
-        let state = State::new(conn.clone(), globals, &qh)?;
+        let state = State::new(conn.clone(), globals, &qh, sender)?;
 
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -57,6 +71,8 @@ impl Orchestrator {
 
         Ok(Self {
             state,
+            receiver,
+
             event_queue,
 
             instance,
@@ -120,6 +136,7 @@ impl Orchestrator {
         let view = View::new(
             ViewHandle::LayerSurface(layer),
             surface,
+            adapter,
             device,
             queue,
             configuration,
@@ -143,6 +160,8 @@ impl Orchestrator {
 
         window.set_title(&configuration.title);
         window.set_app_id(&configuration.app_id);
+        window.set_min_size(configuration.min_size);
+        window.set_max_size(configuration.max_size);
 
         window.commit();
 
@@ -175,6 +194,7 @@ impl Orchestrator {
         let view = View::new(
             ViewHandle::Window(window),
             surface,
+            adapter,
             device,
             queue,
             configuration,
@@ -186,15 +206,50 @@ impl Orchestrator {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        loop {
-            self.event_queue.dispatch_pending(&mut self.state)?;
+        let wayland = std::thread::spawn(move || -> eyre::Result<()> {
+            let mut event_queue = self.event_queue;
+            let mut state = self.state;
+            loop {
+                event_queue.blocking_dispatch(&mut state)?;
+            }
+        });
 
-            tokio::time::sleep(Duration::from_millis(100)).await;
+        let wayland = tokio::task::spawn_blocking(move || -> Result<()> {
+            wayland
+                .join()
+                .map_err(|e| eyre::Report::msg(format!("{:?}", e)))?
+        });
+
+        let wui: JoinHandle<Result<()>> = tokio::spawn(async move {
+            while let Some(event) = self.receiver.recv().await {
+                if let Some(view_id) = event.view_id {
+                    if let Some(view) = self.views.get_mut(&view_id) {
+                        view.update(event.event).await?;
+                    } else {
+                        eprintln!("Received event for unknown view ID: {:?}", view_id);
+                    }
+                } else {
+                    for view in self.views.values_mut() {
+                        view.update(event.event.clone()).await?;
+                    }
+                }
+            }
+
+            Ok(())
+        });
+
+        tokio::select! {
+            result = wayland => {
+                result?
+            }
+            result = wui => {
+                result?
+            }
         }
     }
 }
 
-pub struct State {
+pub(crate) struct State {
     conn: Connection,
     registry_state: RegistryState,
     seat_state: SeatState,
@@ -205,10 +260,17 @@ pub struct State {
 
     keyboard: Option<WlKeyboard>,
     pointer: Option<WlPointer>,
+
+    sender: StateEventSender,
 }
 
 impl State {
-    pub fn new(conn: Connection, globals: GlobalList, qh: &QueueHandle<Self>) -> Result<Self> {
+    pub fn new(
+        conn: Connection,
+        globals: GlobalList,
+        qh: &QueueHandle<Self>,
+        sender: StateEventSender,
+    ) -> Result<Self> {
         Ok(Self {
             conn: conn,
             registry_state: RegistryState::new(&globals),
@@ -220,6 +282,8 @@ impl State {
 
             keyboard: None,
             pointer: None,
+
+            sender,
         })
     }
 }

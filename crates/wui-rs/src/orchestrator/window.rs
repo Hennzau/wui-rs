@@ -13,16 +13,28 @@ delegate_xdg_shell!(State);
 delegate_xdg_window!(State);
 
 impl WindowHandler for State {
-    fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &Window) {}
+    fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, window: &Window) {
+        if let Err(e) = self.sender.send(StateEvent {
+            event: ViewEvent::Closed,
+            view_id: Some(window.wl_surface().id()),
+        }) {
+            eprintln!("Failed to send request close event: {}", e);
+        }
+    }
 
     fn configure(
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         window: &Window,
-        _configure: WindowConfigure,
+        configure: WindowConfigure,
         _serial: u32,
     ) {
-        println!("Configuring: {:?}", window.wl_surface().id());
+        if let Err(e) = self.sender.send(StateEvent {
+            event: ViewEvent::Configure(WaylandViewConfigure::Window(configure)),
+            view_id: Some(window.wl_surface().id()),
+        }) {
+            eprintln!("Failed to send window configure event: {}", e);
+        }
     }
 }
