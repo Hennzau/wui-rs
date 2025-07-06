@@ -6,6 +6,7 @@ use smithay_client_toolkit::{
     registry_handlers,
     seat::SeatState,
     shell::{
+        WaylandSurface,
         wlr_layer::{Layer, LayerShell, LayerSurface},
         xdg::{
             XdgShell,
@@ -65,6 +66,7 @@ impl WaylandBackend {
 }
 
 pub(crate) struct WaylandProtocol {
+    pub(crate) connection: Connection,
     pub(crate) queue_handle: QueueHandle<State>,
     pub(crate) compositor_state: CompositorState,
     pub(crate) xdg_shell: XdgShell,
@@ -72,27 +74,48 @@ pub(crate) struct WaylandProtocol {
 }
 
 impl WaylandProtocol {
-    pub(crate) fn create_layer(
-        &self,
-        layer: Layer,
-        namespace: Option<impl Into<String>>,
-    ) -> LayerSurface {
+    pub(crate) fn create_layer(&self, configuration: ViewConfiguration) -> LayerSurface {
         let wl_surface = self.compositor_state.create_surface(&self.queue_handle);
 
-        self.layer_shell.create_layer_surface(
+        let layer = self.layer_shell.create_layer_surface(
             &self.queue_handle,
             wl_surface,
-            layer,
-            namespace,
+            configuration.layer,
+            configuration.namespace,
             None,
-        )
+        );
+
+        layer.set_anchor(configuration.anchor);
+        layer.set_keyboard_interactivity(configuration.keyboard_interactivity);
+        layer.set_size(configuration.size.0, configuration.size.1);
+        layer.set_exclusive_zone(configuration.exclusive_zone);
+        layer.set_margin(
+            configuration.margin.0,
+            configuration.margin.1,
+            configuration.margin.2,
+            configuration.margin.3,
+        );
+
+        layer.commit();
+
+        layer
     }
 
-    pub(crate) fn create_window(&self, decorations: WindowDecorations) -> Window {
+    pub(crate) fn create_window(&self, configuration: ViewConfiguration) -> Window {
         let wl_surface = self.compositor_state.create_surface(&self.queue_handle);
 
-        self.xdg_shell
-            .create_window(wl_surface, decorations, &self.queue_handle)
+        let window =
+            self.xdg_shell
+                .create_window(wl_surface, configuration.decorations, &self.queue_handle);
+
+        window.set_title(&configuration.title);
+        window.set_app_id(&configuration.app_id);
+        window.set_min_size(configuration.min_size);
+        window.set_max_size(configuration.max_size);
+
+        window.commit();
+
+        window
     }
 }
 
@@ -115,6 +138,7 @@ impl State {
         let qh = event_queue.handle();
 
         let protocol = WaylandProtocol {
+            connection: connection.clone(),
             queue_handle: qh.clone(),
             compositor_state: CompositorState::bind(&globals, &qh)?,
             xdg_shell: XdgShell::bind(&globals, &qh)?,

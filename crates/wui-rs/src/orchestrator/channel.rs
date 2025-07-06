@@ -4,16 +4,22 @@ use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub enum Request {
+    #[allow(private_interfaces)]
     ForwardEvent {
         event: ViewEvent,
         id: Option<ObjectId>,
     },
+
+    CreateViewLayer(ViewConfiguration),
+    CreateViewWindow(ViewConfiguration),
 }
 
 #[derive(Debug, Clone)]
 pub enum Response {
-    Success,
     NotImplemented,
+
+    ViewLayer(ObjectId),
+    ViewWindow(ObjectId),
 }
 
 #[derive(Debug)]
@@ -33,16 +39,13 @@ impl Client {
         (Self { sender }, Server { receiver })
     }
 
-    pub fn send_no_result(&self, request: Request) {
-        if let Err(e) = self.sender.send(Query {
-            request,
-            response: None,
-        }) {
+    pub(crate) fn send_no_result(&self, request: Request) {
+        if let Err(e) = self.send(request) {
             eprintln!("Failed to send request: {}", e);
         }
     }
 
-    pub fn send(&self, request: Request) -> Result<()> {
+    pub(crate) fn send(&self, request: Request) -> Result<()> {
         let query = Query {
             request,
             response: None,
