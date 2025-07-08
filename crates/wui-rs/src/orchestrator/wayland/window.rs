@@ -14,10 +14,8 @@ delegate_xdg_window!(State);
 
 impl WindowHandler for State {
     fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, window: &Window) {
-        self.client.send_no_result(Request::ForwardEvent {
-            event: ViewEvent::Closed,
-            id: Some(window.wl_surface().id()),
-        });
+        self.client
+            .send_no_result(Request::CloseView(window.wl_surface().id()));
     }
 
     fn configure(

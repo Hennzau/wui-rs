@@ -7,11 +7,8 @@ use smithay_client_toolkit::{
     seat::SeatState,
     shell::{
         WaylandSurface,
-        wlr_layer::{Layer, LayerShell, LayerSurface},
-        xdg::{
-            XdgShell,
-            window::{Window, WindowDecorations},
-        },
+        wlr_layer::{LayerShell, LayerSurface},
+        xdg::{XdgShell, window::Window},
     },
 };
 use wayland_client::{

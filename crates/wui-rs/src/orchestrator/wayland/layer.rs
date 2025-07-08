@@ -14,10 +14,8 @@ delegate_layer!(State);
 
 impl LayerShellHandler for State {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, layer: &LayerSurface) {
-        self.client.send_no_result(Request::ForwardEvent {
-            event: ViewEvent::Closed,
-            id: Some(layer.wl_surface().id()),
-        });
+        self.client
+            .send_no_result(Request::CloseView(layer.wl_surface().id()));
     }
 
     fn configure(

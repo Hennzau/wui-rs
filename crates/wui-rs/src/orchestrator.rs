@@ -28,6 +28,10 @@ impl Orchestrator {
         Ok((Self { inner, backend }, client))
     }
 
+    pub fn client(&self) -> Client {
+        self.inner.client()
+    }
+
     pub async fn run(self) -> Result<()> {
         self.inner.run(self.backend).await
     }
@@ -62,6 +66,10 @@ impl OrchestratorInner {
             backend,
             client,
         ))
+    }
+
+    pub(crate) fn client(&self) -> Client {
+        self.client.clone()
     }
 
     pub(crate) async fn run(mut self, backend: WaylandBackend) -> Result<()> {

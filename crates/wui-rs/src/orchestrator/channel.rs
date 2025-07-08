@@ -2,27 +2,34 @@ use wayland_backend::client::ObjectId;
 
 use crate::prelude::*;
 
-#[derive(Debug, Clone)]
 pub enum Request {
+    Nothing,
+
     #[allow(private_interfaces)]
     ForwardEvent {
         event: ViewEvent,
         id: Option<ObjectId>,
     },
 
+    CloseView(ObjectId),
+
     CreateViewLayer(ViewConfiguration),
     CreateViewWindow(ViewConfiguration),
+
+    AttachChild {
+        id: ObjectId,
+        child: Box<dyn Element>,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum Response {
-    NotImplemented,
+    Success(Option<ObjectId>),
+    Failed(String),
 
-    ViewLayer(ObjectId),
-    ViewWindow(ObjectId),
+    NotImplemented,
 }
 
-#[derive(Debug)]
 pub(crate) struct Query {
     pub(crate) request: Request,
     pub(crate) response: Option<tokio::sync::oneshot::Sender<Response>>,

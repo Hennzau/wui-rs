@@ -1,4 +1,5 @@
 use std::ptr::NonNull;
+use std::sync::Arc;
 
 use ::wgpu::{Adapter, Device, Queue, Surface};
 use ::wgpu::{PowerPreference, RequestAdapterOptions, SurfaceTargetUnsafe};
@@ -15,7 +16,7 @@ impl OrchestratorInner {
     pub(crate) async fn create_wgpu_primitives(
         &self,
         surface: &WlSurface,
-    ) -> Result<(Surface<'static>, Adapter, Device, Queue)> {
+    ) -> Result<(Arc<Surface<'static>>, Arc<Adapter>, Arc<Device>, Arc<Queue>)> {
         let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
             NonNull::new(self.protocol.connection.backend().display_ptr() as *mut _).unwrap(),
         ));
@@ -44,6 +45,11 @@ impl OrchestratorInner {
 
         let (device, queue) = adapter.request_device(&Default::default()).await?;
 
-        Ok((surface, adapter, device, queue))
+        Ok((
+            Arc::new(surface),
+            Arc::new(adapter),
+            Arc::new(device),
+            Arc::new(queue),
+        ))
     }
 }

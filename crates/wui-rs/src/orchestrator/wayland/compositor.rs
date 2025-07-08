@@ -47,10 +47,10 @@ impl CompositorHandler for State {
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
         surface: &WlSurface,
-        time: u32,
+        _time: u32,
     ) {
         self.client.send_no_result(Request::ForwardEvent {
-            event: ViewEvent::Frame(time),
+            event: ViewEvent::Frame,
             id: Some(surface.id()),
         });
     }
