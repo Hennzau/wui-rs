@@ -9,15 +9,7 @@ impl OrchestratorInner {
         id: ObjectId,
         response: Option<Sender<Response>>,
     ) -> Result<()> {
-        let mut result = move || -> Result<()> {
-            if let Some(view) = self.views.remove(&id) {
-                view.close();
-
-                Ok(())
-            } else {
-                Err(eyre::eyre!("View with id {} not found", id))
-            }
-        };
+        let mut result = move || -> Result<()> { self.views.remove(&id) };
 
         match result() {
             Ok(_) => {

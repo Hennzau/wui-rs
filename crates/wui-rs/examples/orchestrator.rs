@@ -1,4 +1,10 @@
-use std::time::Duration;
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 use tokio::task::JoinHandle;
 use wui_rs::prelude::*;
@@ -11,6 +17,7 @@ async fn main() -> Result<()> {
         tokio::time::sleep(Duration::from_millis(100)).await;
         let view = client
             .query(Request::CreateViewLayer(ViewConfiguration {
+                namespace: String::from("Top bar"),
                 anchor: Anchor::TOP,
                 size: (1920, 24),
                 exclusive_zone: 24,
@@ -22,6 +29,7 @@ async fn main() -> Result<()> {
 
         let view = client
             .query(Request::CreateViewLayer(ViewConfiguration {
+                namespace: String::from("Bottom bar"),
                 anchor: Anchor::BOTTOM,
                 size: (1920, 24),
                 exclusive_zone: 24,
@@ -33,6 +41,7 @@ async fn main() -> Result<()> {
 
         let view = client
             .query(Request::CreateViewWindow(ViewConfiguration {
+                namespace: String::from("Settings"),
                 decorations: WindowDecorations::ServerDefault,
                 title: String::from("wui_rs"),
                 app_id: String::from("io.github.wui_rs"),
@@ -46,11 +55,15 @@ async fn main() -> Result<()> {
         Ok(())
     });
 
-    tokio::select! {
-        result = orchestrator.run() => {
-            client.await??;
+    let running = Arc::new(AtomicBool::new(true));
 
-            result
-        }
-    }
+    let task = tokio::spawn(async move { orchestrator.run(running).await });
+
+    let handle = task.abort_handle();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        handle.abort();
+    });
+
+    task.await?
 }

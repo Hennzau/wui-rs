@@ -46,6 +46,7 @@ pub(crate) enum ViewHandle {
 
 pub struct View {
     pub(crate) id: ObjectId,
+    pub(crate) namespace: String,
 
     pub(crate) handle: ViewHandle,
 
@@ -69,14 +70,8 @@ impl View {
         Ok(())
     }
 
-    pub(crate) fn set_child(&mut self, child: Box<dyn Element>) -> Result<()> {
-        if self.child.is_none() {
-            self.child.replace(child);
-
-            Ok(())
-        } else {
-            Err(Report::msg("This view already has a child"))
-        }
+    pub(crate) fn set_child(&mut self, child: Box<dyn Element>) {
+        self.child.replace(child);
     }
 
     pub(crate) fn close(&self) {
@@ -88,6 +83,10 @@ impl View {
                 window.wl_surface().destroy();
             }
         }
+    }
+
+    pub fn namespace(&self) -> String {
+        self.namespace.clone()
     }
 
     pub fn id(&self) -> ObjectId {
@@ -103,6 +102,10 @@ pub struct ViewBuilder {
     pub(crate) child: Option<Box<dyn ElementBuilder>>,
 }
 
+pub fn view() -> Box<ViewBuilder> {
+    Box::new(ViewBuilder::default())
+}
+
 impl Default for ViewBuilder {
     fn default() -> Self {
         Self {
@@ -114,28 +117,22 @@ impl Default for ViewBuilder {
 }
 
 impl ViewBuilder {
-    pub fn with_kind(self, kind: ViewKind) -> Self {
-        Self {
-            kind: kind,
-            configuration: self.configuration,
-            child: self.child,
-        }
+    pub fn with_kind(mut self: Box<Self>, kind: ViewKind) -> Box<Self> {
+        self.kind = kind;
+
+        self
     }
 
-    pub fn with_configuration(self, configuration: ViewConfiguration) -> Self {
-        Self {
-            kind: self.kind,
-            configuration: configuration,
-            child: self.child,
-        }
+    pub fn with_configuration(mut self: Box<Self>, configuration: ViewConfiguration) -> Box<Self> {
+        self.configuration = configuration;
+
+        self
     }
 
-    pub fn with_child(self, child: Box<dyn ElementBuilder>) -> Self {
-        Self {
-            kind: self.kind,
-            configuration: self.configuration,
-            child: Some(child),
-        }
+    pub fn with_child(mut self: Box<Self>, child: Box<dyn ElementBuilder>) -> Box<Self> {
+        self.child = Some(child);
+
+        self
     }
 }
 

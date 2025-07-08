@@ -19,7 +19,7 @@ pub(crate) enum ViewConfigure {
 
 #[derive(Debug, Clone)]
 pub struct ViewConfiguration {
-    pub namespace: Option<String>,
+    pub namespace: String,
     pub layer: Layer,
     pub anchor: Anchor,
     pub keyboard_interactivity: KeyboardInteractivity,
@@ -36,7 +36,7 @@ pub struct ViewConfiguration {
 impl Default for ViewConfiguration {
     fn default() -> Self {
         Self {
-            namespace: None,
+            namespace: String::from("io.app"),
             layer: Layer::Top,
             anchor: Anchor::TOP,
             keyboard_interactivity: KeyboardInteractivity::OnDemand,

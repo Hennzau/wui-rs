@@ -1,3 +1,8 @@
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
 use smithay_client_toolkit::{
     compositor::CompositorState,
     delegate_registry,
@@ -39,17 +44,25 @@ impl WaylandBackend {
         Ok((Self { state, event_queue }, protocol))
     }
 
-    pub(crate) async fn run(mut self) -> Result<()> {
+    pub(crate) async fn run(mut self, running: Arc<AtomicBool>) -> Result<()> {
         let wayland = std::thread::spawn(move || -> eyre::Result<()> {
-            loop {
+            while running.load(Ordering::SeqCst) {
                 self.dispatch()?;
             }
+
+            println!("Stopping...");
+
+            Ok(())
         });
 
         tokio::task::spawn_blocking(move || -> Result<()> {
-            wayland
+            let a = wayland
                 .join()
-                .map_err(|e| eyre::Report::msg(format!("{:?}", e)))?
+                .map_err(|e| eyre::Report::msg(format!("{:?}", e)))?;
+
+            println!("Stopping await");
+
+            a
         })
         .await?
     }
@@ -78,7 +91,7 @@ impl WaylandProtocol {
             &self.queue_handle,
             wl_surface,
             configuration.layer,
-            configuration.namespace,
+            Some(configuration.namespace),
             None,
         );
 

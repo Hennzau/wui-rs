@@ -1,6 +1,6 @@
+use std::sync::{Arc, atomic::AtomicBool};
+
 use ::wgpu::Instance;
-use std::collections::HashMap;
-use wayland_backend::client::ObjectId;
 
 use crate::prelude::*;
 
@@ -11,6 +11,9 @@ pub(crate) mod wayland;
 pub(crate) use wayland::*;
 
 pub(crate) mod wgpu;
+
+pub(crate) mod views;
+pub(crate) use views::*;
 
 use tokio::task::JoinHandle;
 
@@ -32,8 +35,8 @@ impl Orchestrator {
         self.inner.client()
     }
 
-    pub async fn run(self) -> Result<()> {
-        self.inner.run(self.backend).await
+    pub async fn run(self, running: Arc<AtomicBool>) -> Result<()> {
+        self.inner.run(self.backend, running).await
     }
 }
 
@@ -44,7 +47,7 @@ pub(crate) struct OrchestratorInner {
 
     pub(crate) client: Client,
 
-    pub(crate) views: HashMap<ObjectId, View>,
+    pub(crate) views: Views,
 }
 
 impl OrchestratorInner {
@@ -61,7 +64,7 @@ impl OrchestratorInner {
 
                 client: client.clone(),
 
-                views: HashMap::new(),
+                views: Views::new(),
             },
             backend,
             client,
@@ -72,7 +75,11 @@ impl OrchestratorInner {
         self.client.clone()
     }
 
-    pub(crate) async fn run(mut self, backend: WaylandBackend) -> Result<()> {
+    pub(crate) async fn run(
+        mut self,
+        backend: WaylandBackend,
+        running: Arc<AtomicBool>,
+    ) -> Result<()> {
         let server: JoinHandle<Result<()>> = tokio::task::spawn(async move {
             while let Ok(query) = self.server.recv().await {
                 self.handle_query(query).await?;
@@ -82,7 +89,7 @@ impl OrchestratorInner {
         });
 
         let backend: JoinHandle<Result<()>> =
-            tokio::task::spawn(async move { backend.run().await });
+            tokio::task::spawn(async move { backend.run(running).await });
 
         tokio::select! {
             result = server => {

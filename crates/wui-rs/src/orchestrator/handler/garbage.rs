@@ -1,24 +1,9 @@
-use tokio::sync::oneshot::Sender;
-use wayland_backend::client::ObjectId;
-
 use crate::prelude::*;
+use tokio::sync::oneshot::Sender;
 
 impl OrchestratorInner {
-    pub(crate) fn handle_attach_child(
-        &mut self,
-        id: ObjectId,
-        child: Box<dyn Element>,
-        response: Option<Sender<Response>>,
-    ) -> Result<()> {
-        let result = move || -> Result<()> {
-            if let Some(view) = self.views.get_mut(&id) {
-                view.set_child(child);
-
-                Ok(())
-            } else {
-                Err(eyre::eyre!("View with id {} not found", id))
-            }
-        };
+    pub(crate) fn handle_garbage(&mut self, response: Option<Sender<Response>>) -> Result<()> {
+        let mut result = move || -> Result<()> { self.views.garbage() };
 
         match result() {
             Ok(_) => {

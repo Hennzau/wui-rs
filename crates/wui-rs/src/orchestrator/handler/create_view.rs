@@ -9,6 +9,11 @@ use crate::prelude::*;
 
 impl OrchestratorInner {
     async fn create_view_layer(&mut self, configuration: ViewConfiguration) -> Result<ObjectId> {
+        let namespace = configuration.namespace.clone();
+        if let Some(view) = self.views.get_id(&namespace) {
+            return Ok(view.clone());
+        }
+
         let layer = self.protocol.create_layer(configuration);
         let (surface, adapter, device, queue) =
             self.create_wgpu_primitives(layer.wl_surface()).await?;
@@ -17,23 +22,26 @@ impl OrchestratorInner {
 
         let result = id.clone();
 
-        self.views.insert(
-            id.clone(),
-            View {
-                id,
-                handle,
-                surface,
-                adapter,
-                device,
-                queue,
-                child: None,
-            },
-        );
+        self.views.insert(View {
+            id,
+            namespace,
+            handle,
+            surface,
+            adapter,
+            device,
+            queue,
+            child: None,
+        });
 
         Ok(result)
     }
 
     async fn create_view_window(&mut self, configuration: ViewConfiguration) -> Result<ObjectId> {
+        let namespace = configuration.namespace.clone();
+        if let Some(view) = self.views.get_id(&namespace) {
+            return Ok(view.clone());
+        }
+
         let window = self.protocol.create_window(configuration);
         let (surface, adapter, device, queue) =
             self.create_wgpu_primitives(window.wl_surface()).await?;
@@ -42,18 +50,16 @@ impl OrchestratorInner {
 
         let result = id.clone();
 
-        self.views.insert(
-            id.clone(),
-            View {
-                id,
-                handle,
-                surface,
-                adapter,
-                device,
-                queue,
-                child: None,
-            },
-        );
+        self.views.insert(View {
+            id,
+            namespace,
+            handle,
+            surface,
+            adapter,
+            device,
+            queue,
+            child: None,
+        });
 
         Ok(result)
     }

@@ -4,6 +4,8 @@ mod attach_child;
 mod close_view;
 mod create_view;
 mod forward_event;
+mod garbage;
+mod start_caching;
 
 impl OrchestratorInner {
     pub(crate) async fn handle_query(&mut self, query: Query) -> Result<()> {
@@ -27,6 +29,12 @@ impl OrchestratorInner {
             }
             Request::AttachChild { id, child } => {
                 self.handle_attach_child(id, child, response)?;
+            }
+            Request::StartCachingViews => {
+                self.handle_start_caching(response)?;
+            }
+            Request::GarbageViews => {
+                self.handle_garbage(response)?;
             }
             _ => {
                 if let Some(response) = response {

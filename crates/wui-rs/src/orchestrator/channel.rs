@@ -20,6 +20,9 @@ pub enum Request {
         id: ObjectId,
         child: Box<dyn Element>,
     },
+
+    StartCachingViews,
+    GarbageViews,
 }
 
 #[derive(Debug, Clone)]
