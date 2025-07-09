@@ -26,3 +26,5 @@ raw-window-handle = "0.6.0"
 smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
 wayland-client = "0.31.1"
 wayland-backend = { version = "0.3.0", features = ["client_system"] }
+
+wui-renderer = { path = "crates/wui-renderer" }

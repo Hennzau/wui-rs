@@ -21,8 +21,8 @@ pub enum Request {
         child: Box<dyn Element>,
     },
 
-    StartCachingViews,
-    GarbageViews,
+    Caching,
+    Garbage,
 }
 
 #[derive(Debug, Clone)]

@@ -17,6 +17,7 @@ version.workspace = true
 eyre = { workspace = true }
 wgpu = { workspace = true }
 tokio = { workspace = true }
+
 raw-window-handle = { workspace = true }
 
 smithay-client-toolkit = { workspace = true }

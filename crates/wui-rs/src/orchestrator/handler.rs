@@ -30,10 +30,10 @@ impl OrchestratorInner {
             Request::AttachChild { id, child } => {
                 self.handle_attach_child(id, child, response)?;
             }
-            Request::StartCachingViews => {
+            Request::Caching => {
                 self.handle_start_caching(response)?;
             }
-            Request::GarbageViews => {
+            Request::Garbage => {
                 self.handle_garbage(response)?;
             }
             _ => {
