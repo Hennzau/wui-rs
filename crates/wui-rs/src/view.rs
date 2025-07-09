@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use eyre::OptionExt;
 use smithay_client_toolkit::{
+    reexports::client::{backend::ObjectId, protocol::wl_output::Transform},
     seat::{
         keyboard::{KeyEvent, Keysym, Modifiers},
         pointer::PointerEvent,
@@ -9,8 +10,6 @@ use smithay_client_toolkit::{
     shell::{WaylandSurface, wlr_layer::LayerSurface, xdg::window::Window},
 };
 use tokio::task::JoinHandle;
-use wayland_backend::client::ObjectId;
-use wayland_client::protocol::wl_output::Transform;
 
 pub mod config;
 pub use config::*;
@@ -164,5 +163,13 @@ impl ElementBuilder for ViewBuilder {
                 _ => Err(Report::msg("A view cannot have a view as unique child!")),
             }
         })
+    }
+}
+
+pub type ViewsBuilder = Vec<Box<dyn ElementBuilder>>;
+
+impl From<Box<ViewBuilder>> for ViewsBuilder {
+    fn from(builder: Box<ViewBuilder>) -> Self {
+        vec![builder]
     }
 }

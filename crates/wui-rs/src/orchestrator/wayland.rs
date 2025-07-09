@@ -1,7 +1,4 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
+use std::time::Duration;
 
 use smithay_client_toolkit::{
     compositor::CompositorState,
@@ -16,6 +13,7 @@ use smithay_client_toolkit::{
         xdg::{XdgShell, window::Window},
     },
 };
+use tokio::task::JoinHandle;
 use wayland_client::{
     Connection, EventQueue, QueueHandle,
     globals::registry_queue_init,
@@ -44,34 +42,24 @@ impl WaylandBackend {
         Ok((Self { state, event_queue }, protocol))
     }
 
-    pub(crate) async fn run(mut self, running: Arc<AtomicBool>) -> Result<()> {
-        let wayland = std::thread::spawn(move || -> eyre::Result<()> {
-            while running.load(Ordering::SeqCst) {
-                self.dispatch()?;
+    pub(crate) async fn run(mut self) -> Result<()> {
+        let event_loop: JoinHandle<Result<()>> = tokio::task::spawn(async move {
+            loop {
+                self.event_queue.flush()?;
+
+                if let Some(guard) = self.event_queue.prepare_read() {
+                    if let Err(e) = guard.read_without_dispatch() {
+                        eprintln!("Error reading events: {:?}", e);
+                    }
+                }
+
+                self.event_queue.dispatch_pending(&mut self.state).unwrap();
+
+                tokio::time::sleep(Duration::from_millis(16)).await;
             }
-
-            println!("Stopping...");
-
-            Ok(())
         });
 
-        tokio::task::spawn_blocking(move || -> Result<()> {
-            let a = wayland
-                .join()
-                .map_err(|e| eyre::Report::msg(format!("{:?}", e)))?;
-
-            println!("Stopping await");
-
-            a
-        })
-        .await?
-    }
-
-    pub(crate) fn dispatch(&mut self) -> Result<()> {
-        self.event_queue
-            .blocking_dispatch(&mut self.state)
-            .map(|_| ())
-            .map_err(Report::msg)
+        event_loop.await?
     }
 }
 

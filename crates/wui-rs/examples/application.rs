@@ -2,7 +2,9 @@ use wui_rs::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Application::new(MyApp::default(), MyApp::view)?.run().await
+    Application::new(MyApp::default(), MyApp::views)?
+        .run()
+        .await
 }
 
 struct MyApp {}
@@ -14,7 +16,22 @@ impl Default for MyApp {
 }
 
 impl MyApp {
-    fn view(&self) -> Box<dyn ElementBuilder> {
-        view().with_kind(ViewKind::Layer)
+    fn views(&self) -> ViewsBuilder {
+        vec![
+            view()
+                .with_configuration(ViewConfiguration {
+                    anchor: Anchor::TOP,
+                    namespace: String::from("Top bar"),
+                    ..Default::default()
+                })
+                .with_child(rect()),
+            view()
+                .with_configuration(ViewConfiguration {
+                    anchor: Anchor::BOTTOM,
+                    namespace: String::from("Bottom bar"),
+                    ..Default::default()
+                })
+                .with_child(rect()),
+        ]
     }
 }

@@ -2,6 +2,9 @@ use tokio::task::JoinHandle;
 
 use crate::prelude::*;
 
+pub mod rect;
+pub use rect::*;
+
 pub trait Element: Send + Sync {}
 
 pub trait ElementBuilder: Send + Sync {

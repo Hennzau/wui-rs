@@ -1,3 +1,5 @@
+use tokio::task::JoinHandle;
+
 use crate::prelude::*;
 
 pub struct Application<State: 'static> {
@@ -5,13 +7,13 @@ pub struct Application<State: 'static> {
     pub(crate) orchestrator: Orchestrator,
     pub(crate) client: Client,
 
-    pub(crate) element: Box<dyn Fn(&State) -> Box<dyn ElementBuilder>>,
+    pub(crate) views: Box<dyn Fn(&State) -> Vec<Box<dyn ElementBuilder>>>,
 }
 
 impl<State: 'static> Application<State> {
     pub fn new(
         state: State,
-        element: impl Fn(&State) -> Box<dyn ElementBuilder> + 'static,
+        views: impl Fn(&State) -> Vec<Box<dyn ElementBuilder>> + 'static,
     ) -> Result<Self>
     where
         Self: Sized + 'static,
@@ -22,13 +24,32 @@ impl<State: 'static> Application<State> {
             state,
             orchestrator,
             client,
-            element: Box::new(element),
+            views: Box::new(views),
         })
     }
 
     pub async fn run(self) -> Result<()> {
-        loop {}
+        let orchestrator: JoinHandle<Result<()>> =
+            tokio::task::spawn(async move { self.orchestrator.run().await });
 
-        Ok(())
+        self.client.query(Request::StartCachingViews).await?;
+
+        for view in (self.views)(&self.state) {
+            let _ = view.build(self.client.clone()).await??;
+        }
+
+        self.client.query(Request::GarbageViews).await?;
+
+        println!("Press Ctrl+C to terminate the application.");
+
+        tokio::select! {
+            result = orchestrator => {
+                result?
+            }
+            _ = tokio::signal::ctrl_c() => {
+                println!("Received Ctrl+C, shutting down the application.");
+                Ok(())
+            }
+        }
     }
 }

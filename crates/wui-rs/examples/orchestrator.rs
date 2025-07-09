@@ -1,12 +1,5 @@
-use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::Duration,
-};
-
 use tokio::task::JoinHandle;
+
 use wui_rs::prelude::*;
 
 #[tokio::main]
@@ -14,7 +7,6 @@ async fn main() -> Result<()> {
     let (orchestrator, client) = Orchestrator::new()?;
 
     let client: JoinHandle<Result<()>> = tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(100)).await;
         let view = client
             .query(Request::CreateViewLayer(ViewConfiguration {
                 namespace: String::from("Top bar"),
@@ -55,15 +47,16 @@ async fn main() -> Result<()> {
         Ok(())
     });
 
-    let running = Arc::new(AtomicBool::new(true));
+    tokio::select! {
+        _ = orchestrator.run() => {
+            println!("Orchestrator stopped");
+            client.await??;
+        }
+        _ = tokio::signal::ctrl_c() => {
+            println!("Received Ctrl+C");
+            client.await??;
+        }
+    }
 
-    let task = tokio::spawn(async move { orchestrator.run(running).await });
-
-    let handle = task.abort_handle();
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        handle.abort();
-    });
-
-    task.await?
+    Ok(())
 }
