@@ -30,7 +30,6 @@ impl OrchestratorInner {
             adapter,
             device,
             queue,
-            child: None,
         });
 
         Ok(result)
@@ -58,7 +57,6 @@ impl OrchestratorInner {
             adapter,
             device,
             queue,
-            child: None,
         });
 
         Ok(result)

@@ -1,6 +1,6 @@
 use tokio::task::JoinHandle;
 
-use wui_rs::prelude::*;
+use wui_view::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {

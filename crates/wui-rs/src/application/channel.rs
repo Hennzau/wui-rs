@@ -2,60 +2,53 @@ use wayland_backend::client::ObjectId;
 
 use crate::prelude::*;
 
-pub enum Request {
+pub enum Request<Message: 'static + Send + Sync> {
     Nothing,
 
-    #[allow(private_interfaces)]
-    ForwardEvent {
-        event: ViewEvent,
-        id: Option<ObjectId>,
-    },
-
-    CloseView(ObjectId),
-
-    CreateViewLayer(ViewConfiguration),
-    CreateViewWindow(ViewConfiguration),
-
-    AttachChild {
-        id: ObjectId,
-        child: Box<dyn Element>,
-    },
-
-    Caching,
-    Garbage,
+    Distribute { id: Option<ObjectId>, event: Event },
+    Close { id: ObjectId },
+    Create { view: View<Message> },
 }
 
 #[derive(Debug, Clone)]
 pub enum Response {
-    Success(Option<ObjectId>),
+    Success,
     Failed(String),
 
     NotImplemented,
 }
 
-pub(crate) struct Query {
-    pub(crate) request: Request,
+pub(crate) struct Query<Message: 'static + Send + Sync> {
+    pub(crate) request: Request<Message>,
     pub(crate) response: Option<tokio::sync::oneshot::Sender<Response>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct Client {
-    pub(crate) sender: tokio::sync::mpsc::UnboundedSender<Query>,
+#[derive(Debug)]
+pub struct Client<Message: 'static + Send + Sync> {
+    pub(crate) sender: tokio::sync::mpsc::UnboundedSender<Query<Message>>,
 }
 
-impl Client {
-    pub(crate) fn new() -> (Self, Server) {
+impl<Message: 'static + Send + Sync> Clone for Client<Message> {
+    fn clone(&self) -> Self {
+        Self {
+            sender: self.sender.clone(),
+        }
+    }
+}
+
+impl<Message: 'static + Send + Sync> Client<Message> {
+    pub(crate) fn new() -> (Self, Server<Message>) {
         let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
         (Self { sender }, Server { receiver })
     }
 
-    pub(crate) fn send_no_result(&self, request: Request) {
+    pub(crate) fn send_no_result(&self, request: Request<Message>) {
         if let Err(e) = self.send(request) {
             eprintln!("Failed to send request: {}", e);
         }
     }
 
-    pub(crate) fn send(&self, request: Request) -> Result<()> {
+    pub(crate) fn send(&self, request: Request<Message>) -> Result<()> {
         let query = Query {
             request,
             response: None,
@@ -64,7 +57,7 @@ impl Client {
         self.sender.send(query).map_err(Report::msg)
     }
 
-    pub async fn query(&self, request: Request) -> Result<Response> {
+    pub async fn query(&self, request: Request<Message>) -> Result<Response> {
         let (response_sender, response_receiver) = tokio::sync::oneshot::channel();
 
         let query = Query {
@@ -82,12 +75,12 @@ impl Client {
     }
 }
 
-pub(crate) struct Server {
-    pub(crate) receiver: tokio::sync::mpsc::UnboundedReceiver<Query>,
+pub(crate) struct Server<Message: 'static + Send + Sync> {
+    pub(crate) receiver: tokio::sync::mpsc::UnboundedReceiver<Query<Message>>,
 }
 
-impl Server {
-    pub(crate) async fn recv(&mut self) -> Result<Query> {
+impl<Message: 'static + Send + Sync> Server<Message> {
+    pub(crate) async fn recv(&mut self) -> Result<Query<Message>> {
         self.receiver
             .recv()
             .await

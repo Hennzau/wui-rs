@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-mod attach_child;
 mod close_view;
 mod create_view;
 mod forward_event;
@@ -26,9 +25,6 @@ impl OrchestratorInner {
             }
             Request::CloseView(id) => {
                 self.handle_close_view(id, response)?;
-            }
-            Request::AttachChild { id, child } => {
-                self.handle_attach_child(id, child, response)?;
             }
             Request::Caching => {
                 self.handle_start_caching(response)?;

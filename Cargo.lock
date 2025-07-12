@@ -1734,6 +1734,20 @@ dependencies = [
  "wayland-backend",
  "wayland-client",
  "wgpu",
+ "wui-renderer",
+]
+
+[[package]]
+name = "wui-view"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "raw-window-handle",
+ "smithay-client-toolkit",
+ "tokio",
+ "wayland-backend",
+ "wayland-client",
+ "wgpu",
 ]
 
 [[package]]
