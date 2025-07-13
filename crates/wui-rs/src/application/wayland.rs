@@ -71,6 +71,47 @@ pub(crate) struct WaylandProtocol<Message: 'static + Send + Sync> {
     pub(crate) layer_shell: LayerShell,
 }
 
+impl<Message: 'static + Send + Sync> WaylandProtocol<Message> {
+    pub(crate) fn create_layer(&self, view: &View<Message>) -> LayerSurface {
+        let wl_surface = self.compositor_state.create_surface(&self.queue_handle);
+
+        let layer = self.layer_shell.create_layer_surface(
+            &self.queue_handle,
+            wl_surface,
+            view.layer,
+            Some(view.label.clone()),
+            None,
+        );
+
+        layer.set_anchor(view.anchor);
+        layer.set_keyboard_interactivity(view.keyboard_interactivity);
+        layer.set_size(view.size.0, view.size.1);
+        layer.set_exclusive_zone(view.exclusive_zone);
+        layer.set_margin(view.margin.0, view.margin.1, view.margin.2, view.margin.3);
+
+        layer.commit();
+
+        layer
+    }
+
+    pub(crate) fn create_window(&self, view: &View<Message>) -> Window {
+        let wl_surface = self.compositor_state.create_surface(&self.queue_handle);
+
+        let window = self
+            .xdg_shell
+            .create_window(wl_surface, view.decorations, &self.queue_handle);
+
+        window.set_title(&view.label);
+        window.set_app_id(&view.label);
+        window.set_min_size(view.min_size);
+        window.set_max_size(view.max_size);
+
+        window.commit();
+
+        window
+    }
+}
+
 pub(crate) struct State<Message: 'static + Send + Sync> {
     pub(crate) registry_state: RegistryState,
     pub(crate) seat_state: SeatState,

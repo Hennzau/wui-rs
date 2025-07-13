@@ -26,10 +26,15 @@ impl State {
     fn views(&self) -> Views<Message> {
         vec![
             view()
+                .label("bar.top")
                 .size(1920, 24)
+                .exclusive_zone(24)
                 .child(rect().size(24, 24).child(rect().size(12, 12))),
             view()
-                .size(24, 1080)
+                .label("bar.bottom")
+                .size(1920, 24)
+                .anchor(Anchor::BOTTOM)
+                .exclusive_zone(24)
                 .child(rect().size(24, 24).child(rect().size(12, 12))),
         ]
         .into()

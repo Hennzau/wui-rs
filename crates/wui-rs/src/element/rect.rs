@@ -1,4 +1,4 @@
-use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::prelude::*;
 
@@ -7,17 +7,12 @@ pub struct Rect<Message: 'static + Send + Sync> {
 }
 
 impl<Message: 'static + Send + Sync> Widget<Message> for Rect<Message> {
-    fn build(
-        self: Box<Self>,
-        _client: Client<Message>,
-    ) -> JoinHandle<Option<Box<dyn Widget<Message>>>> {
-        tokio::spawn(async move { Some(self as Box<dyn Widget<Message>>) })
-    }
+    fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event) -> Result<()> {
+        if let Some(child) = &mut self.child {
+            child.on_event(messages, event)?;
+        }
 
-    fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event) {
-        self.child
-            .as_mut()
-            .map(|child| child.on_event(messages, event));
+        Ok(())
     }
 
     fn render(&self) {

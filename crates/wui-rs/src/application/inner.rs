@@ -15,6 +15,8 @@ pub(crate) struct ApplicationInner<Message: 'static + Send + Sync> {
     pub(crate) client: Client<Message>,
 
     pub(crate) sender: UnboundedSender<Message>,
+
+    pub(crate) views: Views<Message>,
 }
 
 impl<Message: 'static + Send + Sync> ApplicationInner<Message> {
@@ -33,14 +35,22 @@ impl<Message: 'static + Send + Sync> ApplicationInner<Message> {
                 server,
                 client,
                 sender,
+                views: Views::new(),
             },
         ))
     }
 
     pub(crate) async fn run(mut self) -> Result<()> {
         let server: JoinHandle<Result<()>> = tokio::spawn(async move {
-            while let Ok(_query) = self.server.recv().await {
-                // Handle the query here
+            while let Ok(query) = self.server.recv().await {
+                handle_query(
+                    query,
+                    &mut self.views,
+                    &self.sender,
+                    &self.instance,
+                    &self.protocol,
+                )
+                .await;
             }
 
             Ok(())

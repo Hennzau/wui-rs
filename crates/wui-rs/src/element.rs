@@ -1,19 +1,15 @@
+use tokio::sync::mpsc::UnboundedSender;
+
 use crate::prelude::*;
 
 pub mod rect;
 pub use rect::*;
 
 pub mod view;
-use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
 pub use view::*;
 
 pub trait Widget<Message: 'static + Send + Sync>: Send + Sync {
-    fn build(
-        self: Box<Self>,
-        client: Client<Message>,
-    ) -> JoinHandle<Option<Box<dyn Widget<Message>>>>;
-
-    fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event);
+    fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event) -> Result<()>;
 
     fn render(&self);
 }
@@ -27,14 +23,8 @@ impl<Message: 'static + Send + Sync> Element<Message> {
         Self { widget }
     }
 
-    pub async fn build(self, client: Client<Message>) -> Result<Option<Self>> {
-        let widget = self.widget.build(client).await?;
-
-        Ok(widget.map(|w| Element::new(w)))
-    }
-
-    pub fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event) {
-        self.widget.on_event(messages, event);
+    pub fn on_event(&mut self, messages: &UnboundedSender<Message>, event: Event) -> Result<()> {
+        self.widget.on_event(messages, event)
     }
 
     pub fn render(&self) {

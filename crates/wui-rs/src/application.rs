@@ -1,12 +1,13 @@
+use tokio::sync::mpsc::UnboundedReceiver;
+
 pub mod channel;
 pub use channel::*;
 
-pub mod handler;
-pub use handler::*;
+pub(crate) mod handler;
+pub(crate) use handler::*;
 
-pub mod wayland;
-use tokio::sync::mpsc::UnboundedReceiver;
-pub use wayland::*;
+pub(crate) mod wayland;
+pub(crate) use wayland::*;
 
 pub(crate) mod inner;
 pub(crate) use inner::*;
@@ -49,17 +50,15 @@ impl<State: 'static, Message: 'static + Send + Sync> Application<State, Message>
 
         let inner = tokio::task::spawn(async move { self.inner.run().await });
 
-        for view in (self.views)(&self.state).0 {
-            let _ = Box::new(view).build(client.clone()).await?;
-        }
+        let views = (self.views)(&self.state);
+        client.query(Request::Create { views }).await?;
 
         let mut server = async move || -> Result<()> {
             while let Some(message) = self.receiver.recv().await {
                 (self.update)(&mut self.state, message);
 
-                for view in (self.views)(&self.state).0 {
-                    let _ = Box::new(view).build(client.clone()).await?;
-                }
+                let views = (self.views)(&self.state);
+                client.query(Request::Create { views }).await?;
             }
 
             Ok(())
