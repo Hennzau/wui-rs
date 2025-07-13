@@ -21,7 +21,7 @@ impl Default for State {
 }
 
 impl State {
-    fn update(&mut self, message: Message) {}
+    fn update(&mut self, _: Message) {}
 
     fn views(&self) -> Views<Message> {
         vec![

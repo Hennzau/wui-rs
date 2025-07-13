@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/wui-renderer", "crates/wui-rs", "crates/wui-view"]
+members = ["crates/wui-renderer", "crates/wui-rs"]
 resolver = "3"
 
 [workspace.package]
@@ -28,4 +28,3 @@ wayland-client = "0.31.1"
 wayland-backend = { version = "0.3.0", features = ["client_system"] }
 
 wui-renderer = { path = "crates/wui-renderer" }
-wui-view = { path = "crates/wui-view" }

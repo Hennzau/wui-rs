@@ -10,19 +10,6 @@ pub enum Request<Message: 'static + Send + Sync> {
     Create { views: Views<Message> },
 }
 
-impl<Message: 'static + Send + Sync> std::fmt::Display for Request<Message> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Request::Nothing => write!(f, "Nothing"),
-            Request::Distribute { id, event } => {
-                write!(f, "Distribute(id: {:?}, event: {:?})", id, event)
-            }
-            Request::Close { id } => write!(f, "Close(id: {})", id),
-            Request::Create { views: _ } => write!(f, "Create(views)"),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum Response {
     Success,
@@ -33,11 +20,7 @@ pub enum Response {
 
 impl std::fmt::Display for Response {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Response::Success => write!(f, "Success"),
-            Response::Failed(msg) => write!(f, "Failed: {}", msg),
-            Response::NotImplemented => write!(f, "Not Implemented"),
-        }
+        write!(f, "{:?}", self)
     }
 }
 
@@ -81,8 +64,6 @@ impl<Message: 'static + Send + Sync> Client<Message> {
     }
 
     pub async fn query(&self, request: Request<Message>) -> Result<Response> {
-        println!("Sending request: {}", request);
-
         let (response_sender, response_receiver) = tokio::sync::oneshot::channel();
 
         let query = Query {

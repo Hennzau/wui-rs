@@ -10,8 +10,6 @@ pub(crate) async fn handle_distribute<Message: 'static + Send + Sync>(
     views: &mut Views<Message>,
     _: Option<Sender<Response>>,
 ) -> Result<()> {
-    println!("Distributing event: {:?}", event);
-
     if let Err(error) = {
         if let Some(id) = id {
             if let Some(view) = views.get_mut_by_id(id.clone()) {
