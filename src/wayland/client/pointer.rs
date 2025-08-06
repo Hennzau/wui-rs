@@ -20,7 +20,7 @@ impl<Message: 'static + Send + Sync> PointerHandler for Client<Message> {
         for event in events {
             let (x, y) = event.position;
 
-            self.throw_event(
+            self.handle_event(
                 WidgetId::Widget(event.surface.id()),
                 WaylandWidgetEvent::WidgetEvent(match event.kind {
                     PointerEventKind::Enter { serial: _ } => Event::PointerEntered,

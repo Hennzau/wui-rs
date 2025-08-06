@@ -8,17 +8,11 @@ async fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    Application::new(Model::default, Model::controller, Model::view)
-        .task(Task::msg(Message::Prepare))
-        .run(|e| {
-            tracing::error!("Error in application: {:?}", e);
-
-            Message::Stop
-        })
-        .await
+    Model::run_with_task_and_err(Task::msg(Message::Prepare), Message::Error).await
 }
 
 enum Message {
+    Error(Report),
     Stop,
     Prepare,
     Change,
@@ -29,9 +23,14 @@ struct Model {
     changed: bool,
 }
 
-impl Model {
+impl Controller<Message> for Model {
     fn controller(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::Error(report) => {
+                tracing::error!("Error: {}", report);
+
+                Task::msg(Message::Stop)
+            }
             Message::Stop => Task::stop(),
             Message::Prepare => Task::future(async move {
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -49,7 +48,8 @@ impl Model {
             }
         }
     }
-
+}
+impl View<Message> for Model {
     fn view(&self) -> Element<Message> {
         let elements = container().with(
             empty()

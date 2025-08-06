@@ -14,7 +14,7 @@ delegate_layer!(@<Message: 'static + Send + Sync> Client<Message>);
 
 impl<Message: 'static + Send + Sync> LayerShellHandler for Client<Message> {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, layer: &LayerSurface) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(layer.wl_surface().id()),
             WaylandWidgetEvent::Close,
         );
@@ -28,7 +28,7 @@ impl<Message: 'static + Send + Sync> LayerShellHandler for Client<Message> {
         configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(layer.wl_surface().id()),
             WaylandWidgetEvent::Configure {
                 width: configure.new_size.0,

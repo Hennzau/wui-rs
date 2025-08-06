@@ -19,50 +19,78 @@ impl<A: 'static> ApplicationBehavior<A> {
     }
 }
 
-pub(crate) type ModelFn<Model> = Box<dyn Fn() -> Model + Send>;
-pub(crate) type ControllerFn<Model, Message> =
-    Box<dyn Fn(&mut Model, Message) -> Task<Message> + Send>;
-pub(crate) type ViewFn<Model, Message> = Box<dyn Fn(&Model) -> Element<Message> + Send>;
-
-pub struct Application<Model, Message> {
-    pub(crate) model: ModelFn<Model>,
-    pub(crate) controller: ControllerFn<Model, Message>,
-    pub(crate) view: ViewFn<Model, Message>,
-
-    pub(crate) task: Option<Task<Message>>,
+pub trait View<Message> {
+    fn view(&self) -> Element<Message>;
 }
 
-impl<Model, Message> Application<Model, Message> {
-    pub fn new(
-        model: impl Fn() -> Model + Send + 'static,
-        controller: impl Fn(&mut Model, Message) -> Task<Message> + Send + 'static,
-        view: impl Fn(&Model) -> Element<Message> + Send + 'static,
-    ) -> Self {
-        Self {
-            model: Box::new(model),
-            controller: Box::new(controller),
-            view: Box::new(view),
-            task: None,
-        }
+pub trait Controller<Message> {
+    fn controller(&mut self, message: Message) -> Task<Message>;
+}
+
+pub trait Application<Message> {
+    fn run() -> impl Future<Output = Result<()>>;
+
+    fn run_with_err(
+        on_err: impl Fn(Report) -> Message + 'static + Send + Sync,
+    ) -> impl Future<Output = Result<()>>;
+
+    fn run_with_task(task: Task<Message>) -> impl Future<Output = Result<()>>;
+
+    fn run_with_task_and_err(
+        task: Task<Message>,
+        on_err: impl Fn(Report) -> Message + 'static + Send + Sync,
+    ) -> impl Future<Output = Result<()>>;
+}
+
+impl<T, Message: 'static + Send + Sync> Application<Message> for T
+where
+    T: 'static + View<Message> + Controller<Message> + Default + Send + Sync,
+{
+    async fn run() -> Result<()> {
+        T::default()
+            .run_app(None, None::<fn(Report) -> Message>)
+            .await
     }
 
-    pub fn task(self, task: Task<Message>) -> Self {
-        Self {
-            task: Some(task),
-            ..self
-        }
+    async fn run_with_err(
+        on_err: impl Fn(Report) -> Message + 'static + Send + Sync,
+    ) -> Result<()> {
+        T::default().run_app(None, Some(on_err)).await
+    }
+
+    async fn run_with_task(task: Task<Message>) -> Result<()> {
+        T::default()
+            .run_app(Some(task), None::<fn(Report) -> Message>)
+            .await
+    }
+
+    async fn run_with_task_and_err(
+        task: Task<Message>,
+        on_err: impl Fn(Report) -> Message + 'static + Send + Sync,
+    ) -> Result<()> {
+        T::default().run_app(Some(task), Some(on_err)).await
     }
 }
 
-impl<Model: 'static + Send + Sync, Message: 'static + Send + Sync> Application<Model, Message> {
-    pub(crate) async fn jobs(
+trait Runnable<Message> {
+    fn run_app(
         self,
-        on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-    ) -> Result<(
-        JoinHandle<Result<()>>,
-        JoinHandle<()>,
-        JoinHandle<Result<()>>,
-    )> {
+
+        task: Option<Task<Message>>,
+        on_err: Option<impl Fn(Report) -> Message + 'static + Send + Sync>,
+    ) -> impl Future<Output = Result<()>>;
+}
+
+impl<T, Message: 'static + Send + Sync> Runnable<Message> for T
+where
+    T: 'static + View<Message> + Controller<Message> + Default + Send + Sync,
+{
+    async fn run_app(
+        self,
+
+        task: Option<Task<Message>>,
+        on_err: Option<impl Fn(Report) -> Message + 'static + Send + Sync>,
+    ) -> Result<()> {
         let (msg, mut rmsg) = channel::<Message>();
         let (behavior, mut rbehavior) = channel::<ApplicationBehavior<Message>>();
 
@@ -70,11 +98,11 @@ impl<Model: 'static + Send + Sync, Message: 'static + Send + Sync> Application<M
             let pool = TaskPool::new(behavior.clone(), msg.clone());
             let tasks = pool.tx();
 
-            if let Some(task) = self.task {
+            if let Some(task) = task {
                 tasks.send(task);
             }
 
-            let pool = tokio::spawn(pool.run(on_error));
+            let pool = tokio::spawn(pool.run(on_err));
 
             (pool, tasks)
         };
@@ -89,20 +117,20 @@ impl<Model: 'static + Send + Sync, Message: 'static + Send + Sync> Application<M
         };
 
         let app = tokio::spawn(async move {
-            let mut model = (self.model)();
+            let mut model = self;
 
-            let element = (self.view)(&model);
+            let element = model.view();
             let mut labels = element.labels();
             elements.send(Request::Spawn(element));
 
             loop {
                 tokio::select! {
                     Ok(message) = rmsg.recv() => {
-                        let task = (self.controller)(&mut model, message);
+                        let task = model.controller(message);
 
                         tasks.send(task);
 
-                        let element = (self.view)(&model);
+                        let element = model.view();
                         let new_labels = element.labels();
 
                         elements.send(Request::Spawn(element));
@@ -121,7 +149,7 @@ impl<Model: 'static + Send + Sync, Message: 'static + Send + Sync> Application<M
                         match behavior {
                             ApplicationBehavior::Stop => break,
                             ApplicationBehavior::Reset => {
-                                model = (self.model)();
+                                model = T::default();
                             },
                             ApplicationBehavior::Spawn(element) => {
                                 elements.send(Request::Spawn(element));
@@ -134,17 +162,8 @@ impl<Model: 'static + Send + Sync, Message: 'static + Send + Sync> Application<M
                 }
             }
 
-            Ok(())
+            Ok::<(), Report>(())
         });
-
-        Ok((app, pool, backend))
-    }
-
-    pub async fn run(
-        self,
-        on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-    ) -> Result<()> {
-        let (app, pool, backend) = self.jobs(on_error).await?;
 
         let ctrl_c = tokio::signal::ctrl_c();
 

@@ -23,7 +23,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         _raw: &[u32],
         _keysyms: &[Keysym],
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(surface.id()),
             WaylandWidgetEvent::WidgetEvent(Event::KeyboardEntered),
         );
@@ -37,7 +37,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         surface: &WlSurface,
         _: u32,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(surface.id()),
             WaylandWidgetEvent::WidgetEvent(Event::KeyboardLeaved),
         );
@@ -51,7 +51,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         _: u32,
         event: KeyEvent,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::AllWidgets,
             WaylandWidgetEvent::WidgetEvent(Event::KeyPressed {
                 key: event.raw_code,
@@ -67,7 +67,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         _serial: u32,
         event: KeyEvent,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::AllWidgets,
             WaylandWidgetEvent::WidgetEvent(Event::KeyPressed {
                 key: event.raw_code,
@@ -83,7 +83,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         _: u32,
         event: KeyEvent,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::AllWidgets,
             WaylandWidgetEvent::WidgetEvent(Event::KeyReleased {
                 key: event.raw_code,
@@ -101,7 +101,7 @@ impl<Message: 'static + Send + Sync> KeyboardHandler for Client<Message> {
         _raw_modifiers: RawModifiers,
         _layout: u32,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::AllWidgets,
             WaylandWidgetEvent::WidgetEvent(Event::KeyModifiersChanged {
                 ctrl: modifiers.ctrl,

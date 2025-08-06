@@ -125,7 +125,7 @@ impl<Message: 'static + Send + Sync> WaylandElements<Message> {
         self.lookup_label.clear();
     }
 
-    pub(crate) fn on_event(
+    pub(crate) fn handle_event(
         &mut self,
         id: WidgetId,
         event: WaylandWidgetEvent,

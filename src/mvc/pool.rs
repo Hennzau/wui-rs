@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use crate::prelude::*;
 
@@ -24,7 +24,7 @@ impl<Message: 'static> TaskPool<Message> {
 impl<Message: 'static + Send + Sync> TaskPool<Message> {
     pub(crate) async fn run(
         mut self,
-        on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
+        on_error: Option<impl Fn(Report) -> Message + 'static + Send + Sync>,
     ) {
         tracing::info!("TaskPool started");
 
@@ -49,7 +49,17 @@ impl<Message: 'static + Send + Sync> TaskPool<Message> {
                         let result = fut.await;
                         signal.map(|s| s.send(()));
 
-                        msg.send(result.unwrap_or_else(|e| on_error(e)))
+                        match on_error.deref() {
+                            Some(on_error) => msg.send(result.unwrap_or_else(on_error)),
+                            None => match result {
+                                Ok(message) => {
+                                    msg.send(message);
+                                }
+                                Err(e) => {
+                                    tracing::error!("Error {}", e);
+                                }
+                            },
+                        };
                     });
                 }
                 TaskInner::Batch(tasks) => {

@@ -128,9 +128,9 @@ impl<Message: 'static + Send + Sync> Client<Message> {
         self.elements.destroy(label);
     }
 
-    pub(crate) fn throw_event(&mut self, id: WidgetId, event: WaylandWidgetEvent) {
+    pub(crate) fn handle_event(&mut self, id: WidgetId, event: WaylandWidgetEvent) {
         self.elements
-            .on_event(id, event, self.msg.clone(), &mut self.renderer)
+            .handle_event(id, event, self.msg.clone(), &mut self.renderer)
             .unwrap_or_else(|e| {
                 tracing::warn!("Error while processing event: {:?}", e);
             });

@@ -14,7 +14,7 @@ delegate_xdg_window!(@<Message: 'static + Send + Sync> Client<Message>);
 
 impl<Message: 'static + Send + Sync> WindowHandler for Client<Message> {
     fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, window: &Window) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(window.wl_surface().id()),
             WaylandWidgetEvent::Close,
         );
@@ -28,7 +28,7 @@ impl<Message: 'static + Send + Sync> WindowHandler for Client<Message> {
         configure: WindowConfigure,
         _serial: u32,
     ) {
-        self.throw_event(
+        self.handle_event(
             WidgetId::Widget(window.wl_surface().id()),
             WaylandWidgetEvent::Configure {
                 width: configure.new_size.0.map(|n| n.get()).unwrap_or(0),

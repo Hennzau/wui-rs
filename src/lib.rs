@@ -5,7 +5,6 @@ mod wayland;
 
 pub mod prelude {
     pub(crate) use eyre::OptionExt;
-    pub(crate) use tokio::task::JoinHandle;
 
     pub use eyre::{Report, Result};
 

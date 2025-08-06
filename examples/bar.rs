@@ -6,29 +6,31 @@ async fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    Application::new(Model::default, Model::controller, Model::view)
-        .run(|e| {
-            tracing::error!("Error in application: {:?}", e);
-
-            Message::Stop
-        })
-        .await
+    Model::run_with_err(Message::Error).await
 }
 
 enum Message {
+    Error(Report),
     Stop,
 }
 
 #[derive(Default)]
 struct Model;
 
-impl Model {
+impl Controller<Message> for Model {
     fn controller(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Stop => Task::stop(),
+            Message::Error(report) => {
+                tracing::error!("Error: {}", report);
+
+                Task::msg(Message::Stop)
+            }
         }
     }
+}
 
+impl View<Message> for Model {
     fn view(&self) -> Element<Message> {
         let elements = container()
             .with(
