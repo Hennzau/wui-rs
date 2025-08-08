@@ -7,6 +7,8 @@ use crate::prelude::*;
 pub(crate) struct WaylandElement<Message> {
     pub(crate) element: Element<Message>,
     pub(crate) surface: Surface,
+
+    pub(crate) scene: Scene,
 }
 
 impl<Message> WaylandElement<Message>
@@ -27,14 +29,29 @@ where
 }
 
 impl<Message: 'static + Send + Sync> WaylandElement<Message> {
-    pub(crate) fn new(protocol: &Protocol<Message>, element: Element<Message>) -> Self {
-        let surface = Surface::new(protocol, &element);
+    pub(crate) async fn new(
+        protocol: &Protocol<Message>,
+        renderer: &mut Renderer,
+        element: Element<Message>,
+    ) -> Result<Self> {
+        let surface = Surface::new(protocol, renderer, &element).await?;
+        let scene = Scene::new();
 
-        Self { element, surface }
+        Ok(Self {
+            element,
+            surface,
+            scene,
+        })
     }
 
     pub(crate) fn with_surface(surface: Surface, element: Element<Message>) -> Self {
-        Self { element, surface }
+        let scene = Scene::new();
+
+        Self {
+            element,
+            surface,
+            scene,
+        }
     }
 
     pub(crate) fn on_event(
@@ -49,10 +66,14 @@ impl<Message: 'static + Send + Sync> WaylandElement<Message> {
                 self.element.on_event(event, msg)?;
             }
             WaylandWidgetEvent::Draw => {
-                self.element.draw(renderer)?;
+                self.scene.reset();
+
+                self.element.draw(&mut self.scene)?;
+
+                renderer.render(&self.surface, &self.scene)?;
             }
             WaylandWidgetEvent::Configure { width, height } => {
-                renderer.configure(&self.surface, width, height);
+                renderer.configure(&mut self.surface, width, height)?;
             }
             WaylandWidgetEvent::Close => unreachable!(),
         }

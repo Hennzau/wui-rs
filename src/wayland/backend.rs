@@ -5,7 +5,6 @@ use smithay_client_toolkit::{
     shell::{wlr_layer::LayerShell, xdg::XdgShell},
 };
 use wayland_client::{Connection, EventQueue, globals::registry_queue_init};
-use wgpu::{Instance, PowerPreference, RequestAdapterOptions};
 
 use crate::prelude::*;
 
@@ -38,23 +37,12 @@ impl<Message: 'static + Send + Sync> Backend<Message> {
         let xdg_shell = XdgShell::bind(&globals, &qh)?;
         let layer_shell = LayerShell::bind(&globals, &qh)?;
 
-        let instance = Instance::default();
-
-        let adapter = instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: PowerPreference::LowPower,
-                ..Default::default()
-            })
-            .await?;
-
-        let (device, queue) = adapter.request_device(&Default::default()).await?;
-        let renderer = Renderer::new(adapter, device, queue);
+        let renderer = Renderer::new()?;
 
         let client = Client::new(msg, &globals, &qh, renderer);
         let protocol = Protocol::new(
             connection,
             compositor_state,
-            instance,
             xdg_shell,
             layer_shell,
             event_queue.handle(),
@@ -95,7 +83,9 @@ impl<Message: 'static + Send + Sync> Backend<Message> {
                     match request {
                         Request::Spawn(element) => {
                             for element in element.into_list() {
-                                self.client.add(&self.protocol, element);
+                                if let Err(e) = self.client.add(&self.protocol, element).await {
+                                    tracing::error!("Error: {}", e);
+                                }
                             }
                         }
                         Request::Destroy(label) => {

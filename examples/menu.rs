@@ -4,10 +4,6 @@ use wui_rs::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .init();
-
     Model::run_with_task_and_err(Task::msg(Message::Prepare), Message::Error).await
 }
 
@@ -33,7 +29,7 @@ impl Controller<Message> for Model {
             }
             Message::Stop => Task::stop(),
             Message::Prepare => Task::future(async move {
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                tokio::time::sleep(Duration::from_secs(2)).await;
 
                 Ok(Message::Change)
             }),

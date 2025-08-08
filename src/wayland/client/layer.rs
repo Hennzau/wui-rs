@@ -35,5 +35,10 @@ impl<Message: 'static + Send + Sync> LayerShellHandler for Client<Message> {
                 height: configure.new_size.1,
             },
         );
+
+        self.handle_event(
+            WidgetId::Widget(layer.wl_surface().id()),
+            WaylandWidgetEvent::Draw,
+        );
     }
 }

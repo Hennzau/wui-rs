@@ -24,7 +24,7 @@ impl<A: 'static, B: 'static + Send + Sync> Widget<B> for MapWidget<A, B> {
         Ok(())
     }
 
-    fn draw(&self, renderer: &mut Renderer) -> Result<()> {
-        self.element.draw(renderer)
+    fn draw(&self, scene: &mut Scene) -> Result<()> {
+        self.element.draw(scene)
     }
 }

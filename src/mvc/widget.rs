@@ -18,6 +18,7 @@ pub trait AnyWidget: Any {
 }
 
 pub type Label = String;
+pub type Scene = vello::Scene;
 
 #[derive(Default, Clone)]
 pub enum KeyboardInteraction {
@@ -96,7 +97,7 @@ pub trait Widget<Message>: Send + Sync + Any {
     }
 
     #[allow(unused_variables)]
-    fn draw(&self, renderer: &mut Renderer) -> Result<()> {
+    fn draw(&self, scene: &mut Scene) -> Result<()> {
         Ok(())
     }
 
@@ -144,8 +145,8 @@ impl<Message: 'static> Element<Message> {
         self.widget.on_event(event, msg)
     }
 
-    pub fn draw(&self, renderer: &mut Renderer) -> Result<()> {
-        self.widget.draw(renderer)
+    pub fn draw(&self, scene: &mut Scene) -> Result<()> {
+        self.widget.draw(scene)
     }
 
     pub fn label(&self) -> Option<Label> {

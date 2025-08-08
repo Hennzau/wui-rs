@@ -1,9 +1,4 @@
-use std::ptr::NonNull;
-
 use crate::prelude::*;
-use raw_window_handle::{
-    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
-};
 use smithay_client_toolkit::{
     compositor::CompositorState,
     shell::{
@@ -17,7 +12,6 @@ use smithay_client_toolkit::{
 };
 use wayland_backend::client::ObjectId;
 use wayland_client::{Proxy, QueueHandle};
-use wgpu::SurfaceTargetUnsafe;
 
 pub(crate) enum WlSurfaceHandle {
     Layer(LayerSurface),
@@ -166,7 +160,7 @@ impl WlSurfaceHandle {
 }
 
 pub struct Surface {
-    pub(crate) wgpu_surface: wgpu::Surface<'static>,
+    pub(crate) wgpu_surface: vello::util::RenderSurface<'static>,
     pub(crate) wayland_surface: WlSurfaceHandle,
 }
 
@@ -186,10 +180,11 @@ impl Surface {
         self.wayland_surface.configure_wayland(element);
     }
 
-    pub(crate) fn new<Message: 'static + Send + Sync>(
+    pub(crate) async fn new<Message: 'static + Send + Sync>(
         protocol: &Protocol<Message>,
+        renderer: &mut Renderer,
         element: &Element<Message>,
-    ) -> Self {
+    ) -> Result<Self> {
         let wayland_surface = match element.display_mode() {
             DisplayMode::Layered { location, kind } => WlSurfaceHandle::layer(
                 &protocol.compositor_state,
@@ -229,27 +224,15 @@ impl Surface {
             ),
         };
 
-        let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
-            NonNull::new(protocol.connection.backend().display_ptr() as *mut _).unwrap(),
-        ));
+        let (width, height) = (element.size().width, element.size().height);
 
-        let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-            NonNull::new(wayland_surface.id().as_ptr() as *mut _).unwrap(),
-        ));
+        let wgpu_surface = renderer
+            .create_surface(width, height, &protocol.connection, wayland_surface.id())
+            .await?;
 
-        let wgpu_surface = unsafe {
-            protocol
-                .instance
-                .create_surface_unsafe(SurfaceTargetUnsafe::RawHandle {
-                    raw_display_handle,
-                    raw_window_handle,
-                })
-                .unwrap()
-        };
-
-        Self {
+        Ok(Self {
             wgpu_surface,
             wayland_surface,
-        }
+        })
     }
 }

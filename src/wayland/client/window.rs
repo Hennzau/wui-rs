@@ -35,5 +35,10 @@ impl<Message: 'static + Send + Sync> WindowHandler for Client<Message> {
                 height: configure.new_size.1.map(|n| n.get()).unwrap_or(0),
             },
         );
+
+        self.handle_event(
+            WidgetId::Widget(window.wl_surface().id()),
+            WaylandWidgetEvent::Draw,
+        );
     }
 }

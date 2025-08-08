@@ -14,7 +14,6 @@ use wayland_client::{
     globals::GlobalList,
     protocol::{wl_keyboard::WlKeyboard, wl_pointer::WlPointer},
 };
-use wgpu::Instance;
 
 use crate::wayland::{WaylandElements, WaylandWidgetEvent};
 
@@ -31,7 +30,6 @@ mod window;
 pub(crate) struct Protocol<Message> {
     pub(crate) connection: Connection,
     pub(crate) compositor_state: CompositorState,
-    pub(crate) instance: Instance,
 
     pub(crate) xdg_shell: XdgShell,
     pub(crate) layer_shell: LayerShell,
@@ -42,7 +40,6 @@ impl<Message> Protocol<Message> {
     pub fn new(
         connection: Connection,
         compositor_state: CompositorState,
-        instance: Instance,
 
         xdg_shell: XdgShell,
         layer_shell: LayerShell,
@@ -51,7 +48,6 @@ impl<Message> Protocol<Message> {
         Self {
             connection,
             compositor_state,
-            instance,
 
             xdg_shell,
             layer_shell,
@@ -108,7 +104,11 @@ impl<Message: 'static + Send + Sync> Client<Message> {
         }
     }
 
-    pub(crate) fn add(&mut self, protocol: &Protocol<Message>, element: Element<Message>) {
+    pub(crate) async fn add(
+        &mut self,
+        protocol: &Protocol<Message>,
+        element: Element<Message>,
+    ) -> Result<()> {
         let label = element.label().unwrap_or_default();
 
         let element = match self.elements.extract(&label) {
@@ -118,10 +118,12 @@ impl<Message: 'static + Send + Sync> Client<Message> {
 
                 WaylandElement::with_surface(surface, element)
             }
-            None => WaylandElement::new(protocol, element),
+            None => WaylandElement::new(protocol, &mut self.renderer, element).await?,
         };
 
         self.elements.add(element);
+
+        Ok(())
     }
 
     pub(crate) fn destroy(&mut self, label: &Label) {

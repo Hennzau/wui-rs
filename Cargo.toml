@@ -3,7 +3,7 @@ name = "wui-rs"
 authors = ["Enzo Le Van <dev@enzo-le-van.fr>"]
 edition = "2024"
 homepage = "https://github.com/Hennzau/wui-rs"
-keywords = []
+keywords = ["Wayland", "Graphics", "UI", "Elm", "GUI", "Rust"]
 categories = []
 description = "Wayland User Interface framework with an MVC architecture."
 documentation = "https://github.com/Hennzau/wui-rs"
@@ -25,7 +25,8 @@ smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit" }
 wayland-client = "0.31.1"
 wayland-backend = { version = "0.3.0", features = ["client_system"] }
 
-wgpu = "26"
+wgpu = "24"
+vello = "0.5"
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
