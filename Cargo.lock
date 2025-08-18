@@ -1082,8 +1082,9 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "smithay-client-toolkit"
-version = "0.19.2"
-source = "git+https://github.com/Smithay/client-toolkit#147665485fdba59974b8ef47a28a94a6ac463ce3"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0512da38f5e2b31201a93524adb8d3136276fa4fe4aafab4e1f727a82b534cc0"
 dependencies = [
  "bitflags 2.9.1",
  "bytemuck",
@@ -1971,8 +1972,6 @@ dependencies = [
  "tracing-subscriber",
  "vello",
  "wayland-backend",
- "wayland-client",
- "wgpu",
 ]
 
 [[package]]
