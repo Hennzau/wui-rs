@@ -5,7 +5,7 @@ use crate::*;
 mod task;
 pub use task::*;
 
-pub struct Pool<Message> {
+pub(crate) struct Pool<Message> {
     pub(crate) tx: Sender<RunnableTask<Message>>,
     pub(crate) msg: Receiver<Message>,
 }

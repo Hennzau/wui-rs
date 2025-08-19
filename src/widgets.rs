@@ -11,7 +11,7 @@ pub use root::*;
 mod wlwgpu;
 pub(crate) use wlwgpu::*;
 
-pub struct Widgets<Message> {
+pub(crate) struct Widgets<Message> {
     pub(crate) widgets: HashMap<SurfaceId, WlWgpuWidget<Message>>,
     pub(crate) lut: HashMap<String, SurfaceId>,
 }
@@ -30,6 +30,8 @@ impl<Message: 'static> Widgets<Message> {
         shell: &mut Shell<Message>,
     ) -> Result<()> {
         let lut = self.lut.drain().collect::<HashMap<_, _>>();
+
+        #[allow(clippy::mutable_key_type)]
         let mut widgets = self.widgets.drain().collect::<HashMap<_, _>>();
 
         for element in elements {
@@ -70,23 +72,19 @@ impl<Message: 'static> Widgets<Message> {
 
                     shell.destroy_surface(id);
                 }
-            } else {
-                if let Some(widget) = self.widgets.get_mut(id) {
-                    widget.handle_event(msg, shell, event.kind)?;
-                }
+            } else if let Some(widget) = self.widgets.get_mut(id) {
+                widget.handle_event(msg, shell, event.kind)?;
+            }
+        } else if event.kind == EventKind::Close {
+            for (id, mut widget) in self.widgets.drain() {
+                widget.handle_event(msg, shell, event.kind.clone())?;
+                self.lut.remove(&widget.label);
+
+                shell.destroy_surface(&id);
             }
         } else {
-            if event.kind == EventKind::Close {
-                for (id, mut widget) in self.widgets.drain() {
-                    widget.handle_event(msg, shell, event.kind.clone())?;
-                    self.lut.remove(&widget.label);
-
-                    shell.destroy_surface(&id);
-                }
-            } else {
-                for widget in self.widgets.values_mut() {
-                    widget.handle_event(msg, shell, event.kind.clone())?;
-                }
+            for widget in self.widgets.values_mut() {
+                widget.handle_event(msg, shell, event.kind.clone())?;
             }
         }
 

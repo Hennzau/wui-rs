@@ -43,12 +43,9 @@ pub mod app {
                 }
 
                 'main: loop {
-                    match event_queue.blocking_dispatch(&mut client) {
-                        Err(e) => {
-                            println!("Error while dispatching events: {}", e);
-                            break 'main;
-                        }
-                        _ => {}
+                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
+                        println!("Error while dispatching events: {}", e);
+                        break 'main;
                     }
 
                     let mut update = false;
@@ -133,12 +130,9 @@ pub mod app {
                 }
 
                 'main: loop {
-                    match event_queue.blocking_dispatch(&mut client) {
-                        Err(e) => {
-                            println!("Error while dispatching events: {}", e);
-                            break 'main;
-                        }
-                        _ => {}
+                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
+                        println!("Error while dispatching events: {}", e);
+                        break 'main;
                     }
 
                     let mut update = false;
@@ -218,12 +212,9 @@ pub mod app {
                 }
 
                 'main: loop {
-                    match event_queue.blocking_dispatch(&mut client) {
-                        Err(e) => {
-                            println!("Error while dispatching events: {}", e);
-                            break 'main;
-                        }
-                        _ => {}
+                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
+                        println!("Error while dispatching events: {}", e);
+                        break 'main;
                     }
 
                     let mut update = false;
@@ -311,12 +302,9 @@ pub mod app {
                 }
 
                 'main: loop {
-                    match event_queue.blocking_dispatch(&mut client) {
-                        Err(e) => {
-                            println!("Error while dispatching events: {}", e);
-                            break 'main;
-                        }
-                        _ => {}
+                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
+                        println!("Error while dispatching events: {}", e);
+                        break 'main;
                     }
 
                     let mut update = false;

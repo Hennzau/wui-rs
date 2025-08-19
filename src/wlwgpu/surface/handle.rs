@@ -39,8 +39,8 @@ impl WlSurfaceHandle {
 
     pub(crate) fn id(&self) -> SurfaceId {
         match self {
-            WlSurfaceHandle::Layer(layer) => SurfaceId(layer.wl_surface().id().into()),
-            WlSurfaceHandle::Window(window) => SurfaceId(window.wl_surface().id().into()),
+            WlSurfaceHandle::Layer(layer) => SurfaceId(layer.wl_surface().id()),
+            WlSurfaceHandle::Window(window) => SurfaceId(window.wl_surface().id()),
         }
     }
 
@@ -80,6 +80,7 @@ impl WlSurfaceHandle {
         WlSurfaceHandle::Window(window)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn layer<Message: 'static>(
         wl: &Wl,
         qh: &QueueHandle<Client<Message>>,

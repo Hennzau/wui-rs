@@ -55,10 +55,10 @@ impl<Message: 'static> WlWgpuWidget<Message> {
         let (wl, wgpu, qh) = (&shell.wl, &mut shell.wgpu, &shell.qh);
 
         let wayland_surface = match root.window {
-            true => WlSurfaceHandle::window(wl, &qh, root.title, root.width, root.height),
+            true => WlSurfaceHandle::window(wl, qh, root.title, root.width, root.height),
             false => WlSurfaceHandle::layer(
                 wl,
-                &qh,
+                qh,
                 root.x,
                 root.y,
                 root.width,

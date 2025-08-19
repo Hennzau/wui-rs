@@ -1,3 +1,5 @@
+pub use eyre::{Report, Result};
+
 mod common;
 pub(crate) use common::*;
 

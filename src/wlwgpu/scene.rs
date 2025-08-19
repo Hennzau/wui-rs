@@ -26,6 +26,12 @@ impl AsRef<vello::Scene> for Scene {
     }
 }
 
+impl Default for Scene {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Scene {
     pub fn new() -> Self {
         vello::Scene::new().into()

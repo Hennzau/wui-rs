@@ -1,5 +1,3 @@
-pub use eyre::{Report, Result};
-
 mod event;
 pub use event::*;
 
@@ -13,10 +11,10 @@ mod shell;
 pub use shell::*;
 
 mod wgpu;
-pub use wgpu::*;
+pub(crate) use wgpu::*;
 
 mod wl;
-pub use wl::*;
+pub(crate) use wl::*;
 
 mod scene;
 pub use scene::*;

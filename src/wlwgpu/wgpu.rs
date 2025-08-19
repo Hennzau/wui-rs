@@ -17,7 +17,10 @@ pub struct Wgpu {
 impl Wgpu {
     pub(crate) fn new() -> Self {
         let ctx = RenderContext::new();
+
+        #[allow(clippy::mutable_key_type)]
         let surfaces = HashMap::new();
+
         let renderers = Vec::new();
 
         Wgpu {
@@ -126,9 +129,5 @@ impl Wgpu {
         surface_texture.present();
 
         Ok(())
-    }
-
-    pub fn surfaces(&self) -> usize {
-        self.surfaces.len()
     }
 }

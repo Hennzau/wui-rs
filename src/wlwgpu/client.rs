@@ -64,11 +64,10 @@ impl<Message: 'static> Client<Message> {
     }
 
     pub(crate) fn handle(&mut self, id: Option<SurfaceId>, kind: EventKind) {
-        if let Some(id) = &id {
-            if !self.shell.exists(id) {
+        if let Some(id) = &id
+            && !self.shell.exists(id) {
                 return;
             }
-        }
 
         if let Err(e) =
             self.widgets
