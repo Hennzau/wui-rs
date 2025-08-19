@@ -19,11 +19,16 @@ tokio = { version = "1", features = ["full"] }
 
 raw-window-handle = "0.6.2"
 
-smithay-client-toolkit = "0.20.0"
+smithay-client-toolkit = { version = "0.20.0", default-features = false, features = [
+    "xkbcommon",
+] }
+
 wayland-backend = { version = "0.3.11", features = ["client_system"] }
 
 vello = "0.5.0"
 tracing = "0.1.41"
+
+pollster = "0.4.0"
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
