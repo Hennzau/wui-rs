@@ -1,15 +1,17 @@
+use smithay_client_toolkit::reexports::client::QueueHandle;
+
 use crate::*;
 
-pub struct Shell {
-    pub(crate) wl: Wl,
-    pub(crate) wgpu: Wgpu,
+pub struct Shell<Message> {
+    pub(crate) qh: QueueHandle<Client<Message>>,
 
-    pub(crate) running: bool,
+    pub(crate) wgpu: Wgpu,
+    pub(crate) wl: Wl,
 }
 
-impl Shell {
-    pub(crate) fn new(wl: Wl, wgpu: Wgpu, running: bool) -> Self {
-        Self { wl, wgpu, running }
+impl<Message: 'static> Shell<Message> {
+    pub(crate) fn new(qh: QueueHandle<Client<Message>>, wl: Wl, wgpu: Wgpu) -> Self {
+        Self { qh, wl, wgpu }
     }
 
     pub fn destroy_surface(&mut self, id: &SurfaceId) {
@@ -38,11 +40,7 @@ impl Shell {
 
     pub fn request_redraw(&self, id: &SurfaceId) {
         if let Some(surface) = self.wgpu.surfaces.get(id) {
-            surface.wayland.request_redraw(&self.wl.qh);
+            surface.wayland.request_redraw(&self.qh);
         }
-    }
-
-    pub fn stop(&mut self) {
-        self.running = false;
     }
 }

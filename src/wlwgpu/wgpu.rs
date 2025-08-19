@@ -50,6 +50,20 @@ impl Wgpu {
     pub fn resize_surface(&mut self, id: &SurfaceId, width: u32, height: u32) {
         if let Some(surface) = self.surfaces.get_mut(id) {
             self.ctx.resize_surface(&mut surface.wgpu, width, height);
+
+            // Vello is setting the alpha mode to Auto, which is not suitable here.
+
+            surface.wgpu.config.alpha_mode = vello::wgpu::CompositeAlphaMode::PreMultiplied;
+            let device = self
+                .ctx
+                .devices
+                .get(surface.dev_id())
+                .expect("Device not found for surface resize");
+
+            surface
+                .wgpu
+                .surface
+                .configure(&device.device, &surface.wgpu.config);
         }
     }
 
@@ -84,7 +98,7 @@ impl Wgpu {
             scene.as_ref(),
             &surface.wgpu.target_view,
             &vello::RenderParams {
-                base_color: vello::peniko::color::palette::css::BLACK,
+                base_color: vello::peniko::color::palette::css::TRANSPARENT,
                 width: surface.wgpu.config.width,
                 height: surface.wgpu.config.height,
                 antialiasing_method: vello::AaConfig::Msaa16,

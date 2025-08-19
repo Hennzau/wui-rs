@@ -1,7 +1,7 @@
 use smithay_client_toolkit::{
     compositor::CompositorState,
     reexports::client::{
-        Connection, EventQueue, QueueHandle,
+        Connection, EventQueue,
         globals::{GlobalList, registry_queue_init},
     },
     shell::{wlr_layer::LayerShell, xdg::XdgShell},
@@ -15,17 +15,16 @@ pub struct Wl {
 
     pub(crate) compositor_state: CompositorState,
 
-    pub(crate) qh: QueueHandle<Client>,
     pub(crate) globals: GlobalList,
 
     pub(crate) connection: Connection,
 }
 
 impl Wl {
-    pub(crate) fn new() -> Result<(Self, EventQueue<Client>)> {
+    pub(crate) fn new<Message: 'static>() -> Result<(Self, EventQueue<Client<Message>>)> {
         let connection = Connection::connect_to_env()?;
 
-        let (globals, event_queue) = registry_queue_init::<Client>(&connection)?;
+        let (globals, event_queue) = registry_queue_init::<Client<Message>>(&connection)?;
         let qh = event_queue.handle();
 
         let compositor_state = CompositorState::bind(&globals, &qh)?;
@@ -36,7 +35,6 @@ impl Wl {
             xdg_shell,
             layer_shell,
             compositor_state,
-            qh,
             globals,
             connection,
         };

@@ -1,7 +1,10 @@
 use smithay_client_toolkit::{
     delegate_registry,
     output::OutputState,
-    reexports::client::protocol::{wl_keyboard::WlKeyboard, wl_pointer::WlPointer},
+    reexports::client::{
+        QueueHandle,
+        protocol::{wl_keyboard::WlKeyboard, wl_pointer::WlPointer},
+    },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     seat::SeatState,
@@ -17,10 +20,12 @@ mod pointer;
 mod seat;
 mod window;
 
-pub(crate) struct Client {
-    pub(crate) shell: Shell,
+pub(crate) struct Client<Message> {
+    pub(crate) msg: Vec<Message>,
 
-    pub(crate) event_loop: EventLoop,
+    pub(crate) widgets: Widgets<Message>,
+
+    pub(crate) shell: Shell<Message>,
 
     pub(crate) keyboard: Option<WlKeyboard>,
     pub(crate) pointer: Option<WlPointer>,
@@ -30,13 +35,17 @@ pub(crate) struct Client {
     pub(crate) output_state: OutputState,
 }
 
-impl Client {
-    pub(crate) fn new(shell: Shell, event_loop: EventLoop) -> Self {
+impl<Message: 'static> Client<Message> {
+    pub(crate) fn new(shell: Shell<Message>, qh: &QueueHandle<Self>) -> Self {
         let registry_state = RegistryState::new(&shell.wl.globals);
-        let seat_state = SeatState::new(&shell.wl.globals, &shell.wl.qh);
-        let output_state = OutputState::new(&shell.wl.globals, &shell.wl.qh);
+        let seat_state = SeatState::new(&shell.wl.globals, qh);
+        let output_state = OutputState::new(&shell.wl.globals, qh);
 
         let (keyboard, pointer) = (None, None);
+
+        let widgets = Widgets::new();
+
+        let msg = Vec::new();
 
         Self {
             output_state,
@@ -46,8 +55,11 @@ impl Client {
             pointer,
             keyboard,
 
-            event_loop,
             shell,
+
+            widgets,
+
+            msg,
         }
     }
 
@@ -58,15 +70,18 @@ impl Client {
             }
         }
 
-        if let Err(e) = self.event_loop.call(&mut self.shell, Event { id, kind }) {
+        if let Err(e) =
+            self.widgets
+                .handle_event(&mut self.msg, &mut self.shell, Event { id, kind })
+        {
             println!("Error {}", e);
         }
     }
 }
 
-delegate_registry!(Client);
+delegate_registry!(@<Message: 'static> Client<Message>);
 
-impl ProvidesRegistryState for Client {
+impl<Message: 'static> ProvidesRegistryState for Client<Message> {
     fn registry(&mut self) -> &mut RegistryState {
         &mut self.registry_state
     }

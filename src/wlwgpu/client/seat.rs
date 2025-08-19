@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     seat::{Capability, SeatHandler, SeatState},
 };
 
-delegate_seat!(Client);
+delegate_seat!(@<Message: 'static> Client<Message>);
 
-impl SeatHandler for Client {
+impl<Message: 'static> SeatHandler for Client<Message> {
     fn seat_state(&mut self) -> &mut SeatState {
         &mut self.seat_state
     }

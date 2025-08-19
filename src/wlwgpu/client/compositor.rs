@@ -12,9 +12,9 @@ use smithay_client_toolkit::{
     },
 };
 
-delegate_compositor!(Client);
+delegate_compositor!(@<Message: 'static> Client<Message>);
 
-impl CompositorHandler for Client {
+impl<Message: 'static> CompositorHandler for Client<Message> {
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,

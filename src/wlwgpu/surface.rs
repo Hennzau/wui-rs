@@ -1,11 +1,8 @@
 use vello::util::RenderSurface;
 use wayland_backend::client::ObjectId;
 
-mod builder;
-pub use builder::*;
-
-mod wl;
-pub(crate) use wl::*;
+mod handle;
+pub(crate) use handle::*;
 
 pub enum KeyboardInteractivity {
     None,

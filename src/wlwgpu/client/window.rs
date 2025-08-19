@@ -12,10 +12,10 @@ use smithay_client_toolkit::{
 
 use crate::*;
 
-delegate_xdg_shell!(Client);
-delegate_xdg_window!(Client);
+delegate_xdg_shell!(@<Message: 'static> Client<Message>);
+delegate_xdg_window!(@<Message: 'static> Client<Message>);
 
-impl WindowHandler for Client {
+impl<Message: 'static> WindowHandler for Client<Message> {
     fn request_close(&mut self, _: &Connection, _: &QueueHandle<Self>, window: &Window) {
         self.handle(Some(window.wl_surface().id().into()), EventKind::Close);
     }

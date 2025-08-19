@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     seat::pointer::{PointerEvent, PointerEventKind, PointerHandler},
 };
 
-delegate_pointer!(Client);
+delegate_pointer!(@<Message: 'static> Client<Message>);
 
-impl PointerHandler for Client {
+impl<Message: 'static> PointerHandler for Client<Message> {
     fn pointer_frame(
         &mut self,
         _conn: &Connection,

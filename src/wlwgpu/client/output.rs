@@ -6,9 +6,9 @@ use smithay_client_toolkit::{
     reexports::client::{Connection, QueueHandle, protocol::wl_output::WlOutput},
 };
 
-delegate_output!(Client);
+delegate_output!(@<Message: 'static> Client<Message>);
 
-impl OutputHandler for Client {
+impl<Message> OutputHandler for Client<Message> {
     fn output_state(&mut self) -> &mut OutputState {
         &mut self.output_state
     }

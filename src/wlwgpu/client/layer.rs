@@ -9,9 +9,9 @@ use smithay_client_toolkit::{
     },
 };
 
-delegate_layer!(Client);
+delegate_layer!(@<Message: 'static> Client<Message>);
 
-impl LayerShellHandler for Client {
+impl<Message: 'static> LayerShellHandler for Client<Message> {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, layer: &LayerSurface) {
         self.handle(Some(layer.wl_surface().id().into()), EventKind::Close);
     }

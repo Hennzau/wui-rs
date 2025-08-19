@@ -24,7 +24,7 @@ pub(crate) enum WlSurfaceHandle {
 }
 
 impl WlSurfaceHandle {
-    pub(crate) fn request_redraw(&self, qh: &QueueHandle<Client>) {
+    pub(crate) fn request_redraw<Message: 'static>(&self, qh: &QueueHandle<Client<Message>>) {
         match self {
             WlSurfaceHandle::Layer(layer) => {
                 layer.wl_surface().frame(qh, layer.wl_surface().clone());
@@ -55,12 +55,18 @@ impl WlSurfaceHandle {
         }
     }
 
-    pub(crate) fn window(wl: &Wl, title: String, width: u32, height: u32) -> Self {
-        let wl_surface = wl.compositor_state.create_surface(&wl.qh);
+    pub(crate) fn window<Message: 'static>(
+        wl: &Wl,
+        qh: &QueueHandle<Client<Message>>,
+        title: String,
+        width: u32,
+        height: u32,
+    ) -> Self {
+        let wl_surface = wl.compositor_state.create_surface(qh);
 
-        let window =
-            wl.xdg_shell
-                .create_window(wl_surface, WindowDecorations::ServerDefault, &wl.qh);
+        let window = wl
+            .xdg_shell
+            .create_window(wl_surface, WindowDecorations::ServerDefault, qh);
 
         window.set_app_id(title.clone());
         window.set_title(title);
@@ -74,8 +80,9 @@ impl WlSurfaceHandle {
         WlSurfaceHandle::Window(window)
     }
 
-    pub(crate) fn layer(
+    pub(crate) fn layer<Message: 'static>(
         wl: &Wl,
+        qh: &QueueHandle<Client<Message>>,
         x: u32,
         y: u32,
         width: u32,
@@ -84,10 +91,10 @@ impl WlSurfaceHandle {
         anchor: Anchor,
         keyboard: KeyboardInteractivity,
     ) -> Self {
-        let wl_surface = wl.compositor_state.create_surface(&wl.qh);
+        let wl_surface = wl.compositor_state.create_surface(qh);
 
         let layer = wl.layer_shell.create_layer_surface(
-            &wl.qh,
+            qh,
             wl_surface,
             match layer {
                 Layer::Top => smithay_client_toolkit::shell::wlr_layer::Layer::Top,

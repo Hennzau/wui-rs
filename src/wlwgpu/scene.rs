@@ -1,4 +1,6 @@
 pub use vello::peniko::Color;
+pub use vello::peniko::color::palette;
+
 use vello::{
     kurbo::{Affine, Circle, Rect},
     peniko::Fill,

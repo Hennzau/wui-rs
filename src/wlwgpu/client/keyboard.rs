@@ -9,9 +9,9 @@ use smithay_client_toolkit::{
     seat::keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers, RawModifiers},
 };
 
-delegate_keyboard!(Client);
+delegate_keyboard!(@<Message: 'static> Client<Message>);
 
-impl KeyboardHandler for Client {
+impl<Message: 'static> KeyboardHandler for Client<Message> {
     fn enter(
         &mut self,
         _conn: &Connection,
