@@ -1,6 +1,6 @@
 pub use eyre::{Report, Result};
 
-pub use vello;
+pub use vello::peniko::color::palette;
 
 mod event;
 pub use event::*;

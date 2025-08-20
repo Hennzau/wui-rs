@@ -1,6 +1,3 @@
-use vello::peniko::color::palette;
-
-use winit::platform::wayland::Anchor;
 use wui_rs::*;
 
 fn main() -> Result<()> {

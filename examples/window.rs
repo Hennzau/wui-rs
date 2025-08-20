@@ -1,4 +1,3 @@
-use vello::peniko::color::palette;
 use wui_rs::*;
 
 fn main() -> Result<()> {
@@ -7,16 +6,13 @@ fn main() -> Result<()> {
     Model::run()
 }
 
-#[derive(Debug)]
 enum Message {}
 
 #[derive(Default)]
 struct Model {}
 
 impl Controller<Message> for Model {
-    fn controller(&mut self, msg: Message) -> impl IntoTask<Message> {
-        println!("Received message: {:?}", msg);
-
+    fn controller(&mut self, _: Message) -> impl IntoTask<Message> {
         Task::none()
     }
 }

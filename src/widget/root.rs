@@ -1,9 +1,12 @@
 use vello::peniko::Color;
+
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
-    platform::wayland::{Anchor, KeyboardInteractivity, Layer, WindowAttributesWayland},
+    platform::wayland::WindowAttributesWayland,
     window::WindowAttributes,
 };
+
+pub use winit::platform::wayland::{Anchor, KeyboardInteractivity, Layer};
 
 use crate::*;
 
