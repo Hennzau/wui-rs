@@ -8,12 +8,12 @@ mod task;
 pub use task::*;
 
 pub(crate) struct Pool<Message> {
-    pub(crate) tx: Sender<RunnableTask<Message>>,
+    pub(crate) tx: Sender<Task<Message>>,
     pub(crate) msg: Receiver<Message>,
 }
 
 impl<Message: 'static + Send + Sync> Pool<Message> {
-    pub(crate) fn bsubmit(&self, task: RunnableTask<Message>) {
+    pub(crate) fn bsubmit(&self, task: Task<Message>) {
         if let Err(e) = self.tx.blocking_send(task) {
             tracing::error!("Failed to submit task: {}", e);
         }
@@ -34,7 +34,7 @@ impl<Message: 'static + Send + Sync> Pool<Message> {
         let (tx, mut rx) = channel(128);
         let (tmsg, msg) = channel(256);
 
-        let ttx: Sender<RunnableTask<Message>> = tx.clone();
+        let ttx: Sender<Task<Message>> = tx.clone();
         std::thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
@@ -46,7 +46,7 @@ impl<Message: 'static + Send + Sync> Pool<Message> {
                     let signal = task.signal;
 
                     match task.kind {
-                        RunnableTaskKind::Future(fut) => {
+                        TaskKind::Future(fut) => {
                             let on_error = on_error.clone();
 
                             let msg = tmsg.clone();
@@ -72,7 +72,7 @@ impl<Message: 'static + Send + Sync> Pool<Message> {
                                 proxy.wake_up();
                             });
                         }
-                        RunnableTaskKind::Batch(tasks) => {
+                        TaskKind::Batch(tasks) => {
                             let tx = ttx.clone();
 
                             tokio::spawn(async move {
@@ -97,7 +97,7 @@ impl<Message: 'static + Send + Sync> Pool<Message> {
                                 signal.map(|s| s.send(()));
                             });
                         }
-                        RunnableTaskKind::Then(mut first, mut second) => {
+                        TaskKind::Then(mut first, mut second) => {
                             let tx = ttx.clone();
                             tokio::spawn(async move {
                                 let (fsignal, release) = one_shot();

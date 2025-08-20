@@ -38,14 +38,14 @@ impl<Message: 'static> Element<Message> {
 }
 
 pub trait IntoElement<Message> {
-    fn element(self) -> Element<Message>;
+    fn into_element(self) -> Element<Message>;
 }
 
 impl<Message, T> IntoElement<Message> for T
 where
     T: Widget<Message> + 'static,
 {
-    fn element(self) -> Element<Message> {
+    fn into_element(self) -> Element<Message> {
         Element {
             widget: Box::new(self),
         }

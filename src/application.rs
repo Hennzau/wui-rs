@@ -5,8 +5,8 @@ use winit::{
 
 use crate::*;
 
-mod task;
-pub use task::*;
+mod command;
+pub use command::*;
 
 mod pool;
 pub use pool::*;
@@ -35,16 +35,16 @@ where
         }
     }
 
-    pub(crate) fn handle_task(&mut self, task: Task<Message>, event_loop: &dyn ActiveEventLoop) {
+    pub(crate) fn handle_task(&mut self, task: Command<Message>, event_loop: &dyn ActiveEventLoop) {
         match task.kind {
-            TaskKind::None => {}
-            TaskKind::Reset => {
+            CommandKind::None => {}
+            CommandKind::Reset => {
                 self.model = Model::default();
             }
-            TaskKind::Stop => {
+            CommandKind::Stop => {
                 event_loop.exit();
             }
-            TaskKind::Runnable(task) => {
+            CommandKind::Task(task) => {
                 self.pool.bsubmit(task);
             }
         }
@@ -61,7 +61,7 @@ where
         while let Ok(message) = self.pool.try_recv() {
             updated = true;
 
-            let task = self.model.controller(message).into_task();
+            let task = self.model.controller(message).into_command();
             self.handle_task(task, event_loop);
         }
 
@@ -105,7 +105,7 @@ where
         while let Some(message) = self.msg.pop() {
             updated = true;
 
-            let task = self.model.controller(message).into_task();
+            let task = self.model.controller(message).into_command();
             self.handle_task(task, event_loop);
         }
 
@@ -122,7 +122,7 @@ pub trait View<Message> {
 }
 
 pub trait Controller<Message> {
-    fn controller(&mut self, message: Message) -> impl IntoTask<Message>;
+    fn controller(&mut self, message: Message) -> impl IntoCommand<Message>;
 }
 
 pub mod app {
@@ -186,14 +186,14 @@ pub mod app {
     }
 
     pub trait TaskedApplication<Message> {
-        fn run(task: RunnableTask<Message>) -> Result<()>;
+        fn run(task: Task<Message>) -> Result<()>;
     }
 
     impl<Model, Message: 'static + Send + Sync> TaskedApplication<Message> for Model
     where
         Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
     {
-        fn run(task: RunnableTask<Message>) -> Result<()> {
+        fn run(task: Task<Message>) -> Result<()> {
             let event_loop = EventLoop::new()?;
 
             let model = Model::default();
@@ -217,7 +217,7 @@ pub mod app {
     pub trait ErrorHandledTaskedApplication<Message> {
         fn run(
             on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-            task: RunnableTask<Message>,
+            task: Task<Message>,
         ) -> Result<()>;
     }
 
@@ -227,7 +227,7 @@ pub mod app {
     {
         fn run(
             on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-            task: RunnableTask<Message>,
+            task: Task<Message>,
         ) -> Result<()> {
             let event_loop = EventLoop::new()?;
 

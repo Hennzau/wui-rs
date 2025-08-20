@@ -12,8 +12,8 @@ enum Message {}
 struct Model {}
 
 impl Controller<Message> for Model {
-    fn controller(&mut self, _: Message) -> impl IntoTask<Message> {
-        Task::none()
+    fn controller(&mut self, _: Message) -> impl IntoCommand<Message> {
+        Command::none()
     }
 }
 

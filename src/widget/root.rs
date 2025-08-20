@@ -88,7 +88,7 @@ impl<Message> RootWidget<Message> {
     }
 
     pub fn child(mut self, child: impl IntoElement<Message>) -> Self {
-        self.child = Some(child.element());
+        self.child = Some(child.into_element());
         self
     }
 
