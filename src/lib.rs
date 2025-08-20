@@ -1,13 +1,15 @@
 pub use eyre::{Report, Result};
 
-mod common;
-pub(crate) use common::*;
+pub use vello;
 
-mod wlwgpu;
-pub use wlwgpu::*;
+mod event;
+pub use event::*;
+
+mod application;
+pub use application::*;
 
 mod widgets;
 pub use widgets::*;
 
-mod application;
-pub use application::*;
+mod widget;
+pub use widget::*;

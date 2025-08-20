@@ -1,4 +1,6 @@
 use std::{ops::Deref, sync::Arc};
+use tokio::sync::mpsc::{Receiver, Sender, channel};
+use winit::event_loop::EventLoopProxy;
 
 use crate::*;
 
@@ -12,15 +14,20 @@ pub(crate) struct Pool<Message> {
 
 impl<Message: 'static + Send + Sync> Pool<Message> {
     pub(crate) fn bsubmit(&self, task: RunnableTask<Message>) {
-        self.tx.bsend(task);
+        if let Err(e) = self.tx.blocking_send(task) {
+            tracing::error!("Failed to submit task: {}", e);
+        }
     }
 
-    pub(crate) async fn submit(&self, task: RunnableTask<Message>) {
-        self.tx.send(task).await;
+    async fn send<T>(sender: &Sender<T>, value: T) {
+        if let Err(e) = sender.send(value).await {
+            tracing::error!("Failed to send value: {}", e);
+        }
     }
 
     pub(crate) fn new(
         on_error: Option<impl Fn(Report) -> Message + 'static + Send + Sync>,
+        proxy: EventLoopProxy,
     ) -> Self {
         let on_error = Arc::new(on_error);
 
@@ -28,90 +35,102 @@ impl<Message: 'static + Send + Sync> Pool<Message> {
         let (tmsg, msg) = channel(256);
 
         let ttx: Sender<RunnableTask<Message>> = tx.clone();
-        tokio::spawn(async move {
-            while let Ok(task) = rx.recv().await {
-                let signal = task.signal;
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime");
 
-                match task.kind {
-                    RunnableTaskKind::Future(fut) => {
-                        let on_error = on_error.clone();
+            rt.block_on(async move {
+                while let Some(task) = rx.recv().await {
+                    let signal = task.signal;
 
-                        let msg = tmsg.clone();
-                        tokio::spawn(async move {
-                            let result = fut.await;
-                            signal.map(|s| s.send(()));
+                    match task.kind {
+                        RunnableTaskKind::Future(fut) => {
+                            let on_error = on_error.clone();
 
-                            match on_error.deref() {
-                                Some(on_error) => {
-                                    msg.send(result.unwrap_or_else(on_error)).await;
+                            let msg = tmsg.clone();
+                            let proxy = proxy.clone();
+                            tokio::spawn(async move {
+                                let result = fut.await;
+                                signal.map(|s| s.send(()));
+
+                                match on_error.deref() {
+                                    Some(on_error) => {
+                                        Self::send(&msg, result.unwrap_or_else(on_error)).await;
+                                    }
+                                    None => match result {
+                                        Ok(message) => {
+                                            Self::send(&msg, message).await;
+                                        }
+                                        Err(e) => {
+                                            tracing::error!("Error {}", e);
+                                        }
+                                    },
+                                };
+
+                                proxy.wake_up();
+                            });
+                        }
+                        RunnableTaskKind::Batch(tasks) => {
+                            let tx = ttx.clone();
+
+                            tokio::spawn(async move {
+                                let mut releases = Vec::new();
+
+                                for mut t in tasks {
+                                    let (tsignal, release) = one_shot();
+
+                                    t.signal = Some(tsignal);
+
+                                    Self::send(&tx, t).await;
+
+                                    releases.push(release);
                                 }
-                                None => match result {
-                                    Ok(message) => {
-                                        msg.send(message).await;
-                                    }
-                                    Err(e) => {
-                                        tracing::error!("Error {}", e);
-                                    }
-                                },
-                            };
-                        });
-                    }
-                    RunnableTaskKind::Batch(tasks) => {
-                        let tx = ttx.clone();
 
-                        tokio::spawn(async move {
-                            let mut releases = Vec::new();
+                                for release in releases {
+                                    release.await.unwrap_or_else(|e| {
+                                        tracing::error!("Failed to release task: {}", e);
+                                    });
+                                }
 
-                            for mut t in tasks {
-                                let (tsignal, release) = one_shot();
+                                signal.map(|s| s.send(()));
+                            });
+                        }
+                        RunnableTaskKind::Then(mut first, mut second) => {
+                            let tx = ttx.clone();
+                            tokio::spawn(async move {
+                                let (fsignal, release) = one_shot();
+                                first.signal = Some(fsignal);
 
-                                t.signal = Some(tsignal);
+                                Self::send(&tx, *first).await;
 
-                                tx.send(t).await;
-
-                                releases.push(release);
-                            }
-
-                            for release in releases {
                                 release.await.unwrap_or_else(|e| {
-                                    tracing::error!("Failed to release task: {}", e);
+                                    tracing::error!("Failed to release first task: {}", e);
                                 });
-                            }
 
-                            signal.map(|s| s.send(()));
-                        });
-                    }
-                    RunnableTaskKind::Then(mut first, mut second) => {
-                        let tx = ttx.clone();
-                        tokio::spawn(async move {
-                            let (fsignal, release) = one_shot();
-                            first.signal = Some(fsignal);
+                                let (ssignal, release) = one_shot();
+                                second.signal = Some(ssignal);
+                                Self::send(&tx, *second).await;
 
-                            tx.send(*first).await;
+                                release.await.unwrap_or_else(|e| {
+                                    tracing::error!("Failed to release second task: {}", e);
+                                });
 
-                            release.await.unwrap_or_else(|e| {
-                                tracing::error!("Failed to release first task: {}", e);
+                                signal.map(|s| s.send(()));
                             });
-
-                            let (ssignal, release) = one_shot();
-                            second.signal = Some(ssignal);
-                            tx.send(*second).await;
-
-                            release.await.unwrap_or_else(|e| {
-                                tracing::error!("Failed to release second task: {}", e);
-                            });
-
-                            signal.map(|s| s.send(()));
-                        });
+                        }
                     }
                 }
-            }
+
+                Ok::<(), Report>(())
+            })
         });
 
         Self { tx, msg }
     }
 
-    pub(crate) fn pop(&mut self) -> Result<Message> {
-        self.msg.try_recv()
+    pub(crate) fn try_recv(&mut self) -> Result<Message> {
+        self.msg.try_recv().map_err(Report::msg)
     }
 }

@@ -1,8 +1,19 @@
+use vello::Scene;
+
 use crate::*;
+
+mod root;
+pub use root::*;
+
+mod surface;
+pub use surface::*;
+
+mod std;
+pub use std::*;
 
 pub trait Widget<Message>: Send + Sync {
     #[allow(unused_variables)]
-    fn handle_event(&mut self, msg: &mut Vec<Message>, event: EventKind) -> Result<()> {
+    fn handle_event(&mut self, msg: &mut Vec<Message>, event: Event) -> Result<()> {
         Ok(())
     }
 
@@ -17,7 +28,7 @@ pub struct Element<Message> {
 }
 
 impl<Message: 'static> Element<Message> {
-    pub fn handle_event(&mut self, msg: &mut Vec<Message>, event: EventKind) -> Result<()> {
+    pub fn handle_event(&mut self, msg: &mut Vec<Message>, event: Event) -> Result<()> {
         self.widget.handle_event(msg, event)
     }
 

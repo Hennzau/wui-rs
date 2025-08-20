@@ -37,3 +37,19 @@ impl<Message> Task<Message> {
         }
     }
 }
+
+pub trait IntoTask<Message> {
+    fn into_task(self) -> Task<Message>;
+}
+
+impl<Message> IntoTask<Message> for Task<Message> {
+    fn into_task(self) -> Task<Message> {
+        self
+    }
+}
+
+impl<Message> IntoTask<Message> for RunnableTask<Message> {
+    fn into_task(self) -> Task<Message> {
+        Task::runnable(self)
+    }
+}

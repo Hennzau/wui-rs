@@ -1,368 +1,251 @@
+use winit::{
+    application::ApplicationHandler, event::WindowEvent, event_loop::ActiveEventLoop,
+    window::WindowId,
+};
+
 use crate::*;
+
+mod task;
+pub use task::*;
 
 mod pool;
 pub use pool::*;
 
-mod task;
-pub use task::*;
+pub(crate) struct Application<Model, Message> {
+    pub(crate) model: Model,
+
+    pub(crate) widgets: Widgets<Message>,
+
+    pub(crate) msg: Vec<Message>,
+
+    pub(crate) pool: Pool<Message>,
+}
+
+impl<Model, Message: 'static + Send + Sync> Application<Model, Message>
+where
+    Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
+{
+    pub(crate) fn rebuild_view(&mut self, event_loop: &dyn ActiveEventLoop) {
+        if let Err(e) = self
+            .widgets
+            .reconciliate(self.model.view().into_root_widgets(), event_loop)
+        {
+            eprintln!("Error during widget reconciliation: {}", e);
+            event_loop.exit();
+        }
+    }
+
+    pub(crate) fn handle_task(&mut self, task: Task<Message>, event_loop: &dyn ActiveEventLoop) {
+        match task.kind {
+            TaskKind::None => {}
+            TaskKind::Reset => {
+                self.model = Model::default();
+            }
+            TaskKind::Stop => {
+                event_loop.exit();
+            }
+            TaskKind::Runnable(task) => {
+                self.pool.bsubmit(task);
+            }
+        }
+    }
+}
+
+impl<Model, Message: 'static + Send + Sync> ApplicationHandler for Application<Model, Message>
+where
+    Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
+{
+    fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
+        let mut updated = false;
+
+        while let Ok(message) = self.pool.try_recv() {
+            updated = true;
+
+            let task = self.model.controller(message).into_task();
+            self.handle_task(task, event_loop);
+        }
+
+        if updated {
+            self.rebuild_view(event_loop);
+        }
+
+        self.widgets.request_redraw();
+    }
+
+    fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
+        self.rebuild_view(event_loop);
+        self.widgets.request_redraw();
+    }
+
+    fn window_event(&mut self, event_loop: &dyn ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        if event == WindowEvent::RedrawRequested {
+            if let Err(e) = self.widgets.redraw(id) {
+                println!("Error during redraw: {}", e);
+                event_loop.exit();
+                return;
+            }
+
+            return;
+        }
+
+        if let Err(e) = self.widgets.handle_event(&mut self.msg, id, event) {
+            println!("Error handling event: {}", e);
+            event_loop.exit();
+            return;
+        }
+
+        if self.widgets.widgets.is_empty() {
+            event_loop.exit();
+
+            return;
+        }
+
+        let mut updated = false;
+
+        while let Some(message) = self.msg.pop() {
+            updated = true;
+
+            let task = self.model.controller(message).into_task();
+            self.handle_task(task, event_loop);
+        }
+
+        if updated {
+            self.rebuild_view(event_loop);
+        }
+
+        self.widgets.request_redraw();
+    }
+}
 
 pub trait View<Message> {
     fn view(&self) -> impl IntoRootWidgets<Message>;
 }
 
 pub trait Controller<Message> {
-    fn controller(&mut self, message: Message) -> Task<Message>;
+    fn controller(&mut self, message: Message) -> impl IntoTask<Message>;
 }
 
 pub mod app {
+    use winit::event_loop::EventLoop;
+
     use super::*;
 
     pub trait BasicApplication<Message> {
-        fn run(self) -> impl Future<Output = Result<()>>;
+        fn run() -> Result<()>;
     }
 
-    impl<T, Message: 'static + Send + Sync> BasicApplication<Message> for T
+    impl<Model, Message: 'static + Send + Sync> BasicApplication<Message> for Model
     where
-        T: 'static + Controller<Message> + View<Message> + Default + Send + Sync,
+        Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
     {
-        async fn run(self) -> Result<()> {
-            let wgpu = Wgpu::new();
-            let (wl, mut event_queue) = Wl::new()?;
+        fn run() -> Result<()> {
+            let event_loop = EventLoop::new()?;
 
-            let shell = Shell::<Message>::new(event_queue.handle(), wl, wgpu);
-            let mut client = Client::new(shell, &event_queue.handle());
+            let model = Model::default();
+            let widgets = Widgets::new();
+            let msg = Vec::new();
+            let pool = Pool::new(None::<fn(Report) -> Message>, event_loop.create_proxy());
 
-            let mut pool = Pool::<Message>::new(None::<fn(Report) -> Message>);
-
-            let mut model = self;
-
-            std::thread::spawn(move || {
-                let elements = model.view().root_widgets();
-                if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                    println!("Error {}", e);
-                }
-
-                'main: loop {
-                    match event_queue.blocking_dispatch(&mut client) {
-                        Ok(len) => {
-                            if len == 0 {
-                                continue 'main;
-                            }
-                        }
-                        Err(e) => {
-                            println!("Error while dispatching events: {}", e);
-                            break 'main;
-                        }
-                    }
-
-                    let mut update = false;
-
-                    'inner: loop {
-                        let msg_opt = client
-                            .msg
-                            .pop()
-                            .map(Ok::<Message, Report>)
-                            .or_else(|| pool.pop().ok().map(Ok::<Message, Report>));
-
-                        update = update || msg_opt.is_some();
-
-                        match msg_opt {
-                            Some(Ok(msg)) => match model.controller(msg).kind {
-                                TaskKind::None => continue 'inner,
-                                TaskKind::Stop => break 'main,
-                                TaskKind::Reset => {
-                                    model = T::default();
-                                    update = true;
-                                }
-                                TaskKind::Runnable(task) => {
-                                    pool.bsubmit(task);
-                                }
-                            },
-                            _ => break 'inner,
-                        }
-                    }
-
-                    if client.shell.surfaces() == 0 {
-                        break 'main;
-                    }
-
-                    if update {
-                        let elements = model.view().root_widgets();
-                        if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                            println!("Error {}", e);
-                        }
-                    }
-
-                    if let Err(e) = client.widgets.draw(&mut client.shell) {
-                        println!("Error {}", e);
-                    }
-                }
-            });
-
-            tokio::signal::ctrl_c().await?;
-
-            Ok(())
+            event_loop
+                .run_app(Application {
+                    msg,
+                    model,
+                    widgets,
+                    pool,
+                })
+                .map_err(Report::msg)
         }
     }
 
-    pub trait BasicApplicationWithErrorHandling<Message> {
-        fn run(
-            self,
-            on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-        ) -> impl Future<Output = Result<()>>;
+    pub trait ErrorHandledBasicApplication<Message> {
+        fn run(on_error: impl Fn(Report) -> Message + 'static + Send + Sync) -> Result<()>;
     }
 
-    impl<T, Message: 'static + Send + Sync> BasicApplicationWithErrorHandling<Message> for T
+    impl<Model, Message: 'static + Send + Sync> ErrorHandledBasicApplication<Message> for Model
     where
-        T: 'static + Controller<Message> + View<Message> + Default + Send + Sync,
+        Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
     {
-        async fn run(
-            self,
-            on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-        ) -> Result<()> {
-            let wgpu = Wgpu::new();
-            let (wl, mut event_queue) = Wl::new()?;
+        fn run(on_error: impl Fn(Report) -> Message + 'static + Send + Sync) -> Result<()> {
+            let event_loop = EventLoop::new()?;
 
-            let shell = Shell::<Message>::new(event_queue.handle(), wl, wgpu);
-            let mut client = Client::new(shell, &event_queue.handle());
+            let model = Model::default();
+            let widgets = Widgets::new();
+            let msg = Vec::new();
 
-            let mut pool = Pool::<Message>::new(Some(on_error));
+            let pool = Pool::new(Some(on_error), event_loop.create_proxy());
 
-            let mut model = self;
-
-            std::thread::spawn(move || {
-                let elements = model.view().root_widgets();
-                if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                    println!("Error {}", e);
-                }
-
-                'main: loop {
-                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
-                        println!("Error while dispatching events: {}", e);
-                        break 'main;
-                    }
-
-                    let mut update = false;
-
-                    'inner: loop {
-                        let msg_opt = client
-                            .msg
-                            .pop()
-                            .map(Ok::<Message, Report>)
-                            .or_else(|| pool.pop().ok().map(Ok::<Message, Report>));
-
-                        update = update || msg_opt.is_some();
-
-                        match msg_opt {
-                            Some(Ok(msg)) => match model.controller(msg).kind {
-                                TaskKind::None => continue 'inner,
-                                TaskKind::Stop => break 'main,
-                                TaskKind::Reset => {
-                                    model = T::default();
-                                    update = true;
-                                }
-                                TaskKind::Runnable(task) => {
-                                    pool.bsubmit(task);
-                                }
-                            },
-                            _ => break 'inner,
-                        }
-                    }
-
-                    if client.shell.surfaces() == 0 {
-                        break 'main;
-                    }
-
-                    if update {
-                        let elements = model.view().root_widgets();
-                        if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                            println!("Error {}", e);
-                        }
-                    }
-
-                    if let Err(e) = client.widgets.draw(&mut client.shell) {
-                        println!("Error {}", e);
-                    }
-                }
-            });
-
-            tokio::signal::ctrl_c().await?;
-
-            Ok(())
+            event_loop
+                .run_app(Application {
+                    msg,
+                    model,
+                    widgets,
+                    pool,
+                })
+                .map_err(Report::msg)
         }
     }
 
     pub trait TaskedApplication<Message> {
-        fn run(self, task: RunnableTask<Message>) -> impl Future<Output = Result<()>>;
+        fn run(task: RunnableTask<Message>) -> Result<()>;
     }
 
-    impl<T, Message: 'static + Send + Sync> TaskedApplication<Message> for T
+    impl<Model, Message: 'static + Send + Sync> TaskedApplication<Message> for Model
     where
-        T: 'static + Controller<Message> + View<Message> + Default + Send + Sync,
+        Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
     {
-        async fn run(self, task: RunnableTask<Message>) -> Result<()> {
-            let wgpu = Wgpu::new();
-            let (wl, mut event_queue) = Wl::new()?;
+        fn run(task: RunnableTask<Message>) -> Result<()> {
+            let event_loop = EventLoop::new()?;
 
-            let shell = Shell::<Message>::new(event_queue.handle(), wl, wgpu);
-            let mut client = Client::new(shell, &event_queue.handle());
+            let model = Model::default();
+            let widgets = Widgets::new();
+            let msg = Vec::new();
 
-            let mut pool = Pool::<Message>::new(None::<fn(Report) -> Message>);
-            pool.submit(task).await;
+            let pool = Pool::new(None::<fn(Report) -> Message>, event_loop.create_proxy());
+            pool.bsubmit(task);
 
-            let mut model = self;
-
-            std::thread::spawn(move || {
-                let elements = model.view().root_widgets();
-                if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                    println!("Error {}", e);
-                }
-
-                'main: loop {
-                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
-                        println!("Error while dispatching events: {}", e);
-                        break 'main;
-                    }
-
-                    let mut update = false;
-
-                    'inner: loop {
-                        let msg_opt = client
-                            .msg
-                            .pop()
-                            .map(Ok::<Message, Report>)
-                            .or_else(|| pool.pop().ok().map(Ok::<Message, Report>));
-
-                        update = update || msg_opt.is_some();
-
-                        match msg_opt {
-                            Some(Ok(msg)) => match model.controller(msg).kind {
-                                TaskKind::None => continue 'inner,
-                                TaskKind::Stop => break 'main,
-                                TaskKind::Reset => {
-                                    model = T::default();
-                                    update = true;
-                                }
-                                TaskKind::Runnable(task) => {
-                                    pool.bsubmit(task);
-                                }
-                            },
-                            _ => break 'inner,
-                        }
-                    }
-
-                    if client.shell.surfaces() == 0 {
-                        break 'main;
-                    }
-
-                    if update {
-                        let elements = model.view().root_widgets();
-                        if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                            println!("Error {}", e);
-                        }
-                    }
-
-                    if let Err(e) = client.widgets.draw(&mut client.shell) {
-                        println!("Error {}", e);
-                    }
-                }
-            });
-
-            tokio::signal::ctrl_c().await?;
-
-            Ok(())
+            event_loop
+                .run_app(Application {
+                    msg,
+                    model,
+                    widgets,
+                    pool,
+                })
+                .map_err(Report::msg)
         }
     }
 
-    pub trait TaskedApplicationWithErrorHandling<Message> {
+    pub trait ErrorHandledTaskedApplication<Message> {
         fn run(
-            self,
-            task: RunnableTask<Message>,
             on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
-        ) -> impl Future<Output = Result<()>>;
+            task: RunnableTask<Message>,
+        ) -> Result<()>;
     }
 
-    impl<T, Message: 'static + Send + Sync> TaskedApplicationWithErrorHandling<Message> for T
+    impl<Model, Message: 'static + Send + Sync> ErrorHandledTaskedApplication<Message> for Model
     where
-        T: 'static + Controller<Message> + View<Message> + Default + Send + Sync,
+        Model: 'static + Default + Send + Sync + View<Message> + Controller<Message>,
     {
-        async fn run(
-            self,
-            task: RunnableTask<Message>,
+        fn run(
             on_error: impl Fn(Report) -> Message + 'static + Send + Sync,
+            task: RunnableTask<Message>,
         ) -> Result<()> {
-            let wgpu = Wgpu::new();
-            let (wl, mut event_queue) = Wl::new()?;
+            let event_loop = EventLoop::new()?;
 
-            let shell = Shell::<Message>::new(event_queue.handle(), wl, wgpu);
-            let mut client = Client::new(shell, &event_queue.handle());
+            let model = Model::default();
+            let widgets = Widgets::new();
+            let msg = Vec::new();
 
-            let mut pool = Pool::<Message>::new(Some(on_error));
-            pool.submit(task).await;
+            let pool = Pool::new(Some(on_error), event_loop.create_proxy());
+            pool.bsubmit(task);
 
-            let mut model = self;
-
-            std::thread::spawn(move || {
-                let elements = model.view().root_widgets();
-                if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                    println!("Error {}", e);
-                }
-
-                'main: loop {
-                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
-                        println!("Error while dispatching events: {}", e);
-                        break 'main;
-                    }
-
-                    let mut update = false;
-
-                    'inner: loop {
-                        let msg_opt = client
-                            .msg
-                            .pop()
-                            .map(Ok::<Message, Report>)
-                            .or_else(|| pool.pop().ok().map(Ok::<Message, Report>));
-
-                        update = update || msg_opt.is_some();
-
-                        match msg_opt {
-                            Some(Ok(msg)) => match model.controller(msg).kind {
-                                TaskKind::None => continue 'inner,
-                                TaskKind::Stop => break 'main,
-                                TaskKind::Reset => {
-                                    model = T::default();
-                                    update = true;
-                                }
-                                TaskKind::Runnable(task) => {
-                                    pool.bsubmit(task);
-                                }
-                            },
-                            _ => break 'inner,
-                        }
-                    }
-
-                    if client.shell.surfaces() == 0 {
-                        break 'main;
-                    }
-
-                    if update {
-                        let elements = model.view().root_widgets();
-                        if let Err(e) = client.widgets.reconciliate(elements, &mut client.shell) {
-                            println!("Error {}", e);
-                        }
-                    }
-
-                    // I don't know why exactly, but drawing will wake up the event queue...
-                    // But this is really useful so i'll just keep it
-                    if let Err(e) = client.widgets.draw(&mut client.shell) {
-                        println!("Error {}", e);
-                    }
-                }
-            });
-
-            tokio::signal::ctrl_c().await?;
-
-            Ok(())
+            event_loop
+                .run_app(Application {
+                    msg,
+                    model,
+                    widgets,
+                    pool,
+                })
+                .map_err(Report::msg)
         }
     }
 }

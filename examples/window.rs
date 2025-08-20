@@ -1,10 +1,10 @@
+use vello::peniko::color::palette;
 use wui_rs::*;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     use app::BasicApplication;
 
-    Model::default().run().await
+    Model::run()
 }
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ enum Message {}
 struct Model {}
 
 impl Controller<Message> for Model {
-    fn controller(&mut self, msg: Message) -> Task<Message> {
+    fn controller(&mut self, msg: Message) -> impl IntoTask<Message> {
         println!("Received message: {:?}", msg);
 
         Task::none()

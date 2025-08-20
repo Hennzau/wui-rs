@@ -1,37 +1,22 @@
-use std::time::Duration;
+use vello::peniko::color::palette;
 
+use winit::platform::wayland::Anchor;
 use wui_rs::*;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    use app::TaskedApplication;
+fn main() -> Result<()> {
+    use app::BasicApplication;
 
-    Model::default()
-        .run(RunnableTask::future(async move {
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-
-            Ok(Message::Hello)
-        }))
-        .await
+    Model::run()
 }
 
-#[derive(Debug)]
-enum Message {
-    Hello,
-}
+enum Message {}
 
 #[derive(Default)]
 struct Model {}
 
 impl Controller<Message> for Model {
-    fn controller(&mut self, msg: Message) -> Task<Message> {
-        println!("Received message: {:?}", msg);
-
-        Task::runnable(RunnableTask::future(async move {
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-
-            Ok(Message::Hello)
-        }))
+    fn controller(&mut self, _: Message) -> impl IntoTask<Message> {
+        Task::none()
     }
 }
 
@@ -39,15 +24,17 @@ impl View<Message> for Model {
     fn view(&self) -> impl IntoRootWidgets<Message> {
         vec![
             root("bar.top")
-                .width(2133)
-                .height(24)
+                .size((1920, 24).into())
                 .background(palette::css::RED)
-                .anchor(Anchor::Top(24)),
+                .anchor(Anchor::TOP)
+                .exclusive_zone(24)
+                .child(follower::<Message>()),
             root("bar.bottom")
-                .width(2133)
-                .height(24)
+                .size((1920, 24).into())
                 .background(palette::css::BLUE)
-                .anchor(Anchor::Bottom(24)),
+                .anchor(Anchor::BOTTOM)
+                .exclusive_zone(24)
+                .child(follower::<Message>()),
         ]
     }
 }
