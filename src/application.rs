@@ -43,9 +43,16 @@ pub mod app {
                 }
 
                 'main: loop {
-                    if let Err(e) = event_queue.blocking_dispatch(&mut client) {
-                        println!("Error while dispatching events: {}", e);
-                        break 'main;
+                    match event_queue.blocking_dispatch(&mut client) {
+                        Ok(len) => {
+                            if len == 0 {
+                                continue 'main;
+                            }
+                        }
+                        Err(e) => {
+                            println!("Error while dispatching events: {}", e);
+                            break 'main;
+                        }
                     }
 
                     let mut update = false;

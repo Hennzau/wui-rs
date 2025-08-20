@@ -1,14 +1,6 @@
-use std::any::Any;
-
 use crate::*;
 
-pub trait AnyWidget {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_mut(&mut self) -> &mut dyn Any;
-    fn into_any(self: Box<Self>) -> Box<dyn Any>;
-}
-
-pub trait Widget<Message>: Send + Sync + Any {
+pub trait Widget<Message>: Send + Sync {
     #[allow(unused_variables)]
     fn handle_event(&mut self, msg: &mut Vec<Message>, event: EventKind) -> Result<()> {
         Ok(())
@@ -17,20 +9,6 @@ pub trait Widget<Message>: Send + Sync + Any {
     #[allow(unused_variables)]
     fn draw(&self, scene: &mut Scene) -> Result<()> {
         Ok(())
-    }
-}
-
-impl<Message: 'static + Send + Sync> AnyWidget for dyn Widget<Message> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self
     }
 }
 
@@ -45,5 +23,20 @@ impl<Message: 'static> Element<Message> {
 
     pub fn draw(&self, scene: &mut Scene) -> Result<()> {
         self.widget.draw(scene)
+    }
+}
+
+pub trait IntoElement<Message> {
+    fn element(self) -> Element<Message>;
+}
+
+impl<Message, T> IntoElement<Message> for T
+where
+    T: Widget<Message> + 'static,
+{
+    fn element(self) -> Element<Message> {
+        Element {
+            widget: Box::new(self),
+        }
     }
 }

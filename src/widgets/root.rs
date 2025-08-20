@@ -101,8 +101,8 @@ impl<Message> RootWidget<Message> {
         self
     }
 
-    pub fn child(mut self, child: Element<Message>) -> Self {
-        self.child = Some(child);
+    pub fn child(mut self, child: impl IntoElement<Message>) -> Self {
+        self.child = Some(child.element());
         self
     }
 }

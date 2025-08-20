@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use ::std::collections::HashMap;
 
 use crate::*;
 
@@ -10,6 +10,9 @@ pub use root::*;
 
 mod wlwgpu;
 pub(crate) use wlwgpu::*;
+
+mod std;
+pub use std::*;
 
 pub(crate) struct Widgets<Message> {
     pub(crate) widgets: HashMap<SurfaceId, WlWgpuWidget<Message>>,
