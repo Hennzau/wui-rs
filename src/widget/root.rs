@@ -1,5 +1,3 @@
-use vello::peniko::Color;
-
 use winit::{
     dpi::{LogicalPosition, LogicalSize},
     platform::wayland::WindowAttributesWayland,
@@ -139,8 +137,6 @@ impl<Message> RootWidget<Message> {
         attributes
     }
 }
-
-impl<Message: 'static> Widget<Message> for RootWidget<Message> {}
 
 pub trait IntoRootWidgets<Message> {
     fn into_root_widgets(self) -> Vec<RootWidget<Message>>;

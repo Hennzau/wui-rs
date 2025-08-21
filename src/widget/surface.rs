@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vello::{
     AaConfig, Renderer, Scene,
     kurbo::{Affine, Rect},
-    peniko::{Color, Fill, color::palette},
+    peniko::{Color, Fill},
     util::{DeviceHandle, RenderContext, RenderSurface},
     wgpu::{CommandEncoderDescriptor, PresentMode, TextureViewDescriptor},
 };
@@ -89,7 +89,7 @@ impl<Message: 'static> SurfaceWidget<Message> {
         );
 
         if let Some(child) = &self.child {
-            child.draw(&mut self.scene)?;
+            child.draw(&mut self.scene, Affine::IDENTITY)?;
         }
 
         renderer.render_to_texture(

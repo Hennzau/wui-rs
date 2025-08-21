@@ -34,6 +34,7 @@ winit = { git = "https://github.com/SergioRibera/winit/", branch = "layer_shell"
 ] }
 
 vello = { version = "0.5.0", default-features = false, features = ["wgpu"] }
+parley = "0.5.0"
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3", default-features = false, features = [

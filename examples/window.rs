@@ -22,6 +22,6 @@ impl View<Message> for Model {
         root("window.1")
             .windowed()
             .background(palette::css::WHITE)
-            .child(follower::<Message>())
+            .child(square())
     }
 }

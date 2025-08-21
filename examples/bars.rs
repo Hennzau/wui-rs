@@ -24,14 +24,12 @@ impl View<Message> for Model {
                 .size((1920, 24).into())
                 .background(palette::css::RED)
                 .anchor(Anchor::TOP)
-                .exclusive_zone(24)
-                .child(follower::<Message>()),
+                .exclusive_zone(24),
             root("bar.bottom")
                 .size((1920, 24).into())
                 .background(palette::css::BLUE)
                 .anchor(Anchor::BOTTOM)
-                .exclusive_zone(24)
-                .child(follower::<Message>()),
+                .exclusive_zone(24),
         ]
     }
 }

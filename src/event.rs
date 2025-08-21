@@ -1,8 +1,15 @@
-use winit::{
-    dpi::PhysicalPosition,
-    event::{ButtonSource, MouseScrollDelta},
+pub use winit::{
+    event::ButtonSource,
     keyboard::{Key, ModifiersState},
 };
+
+use crate::*;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MouseScrollDelta {
+    LineDelta(f32, f32),
+    PixelDelta(Vec2),
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
@@ -15,13 +22,13 @@ pub enum Event {
     PointerEntered,
     PointerLeft,
 
-    PointerMoved(PhysicalPosition<f64>),
+    PointerMoved(Point),
     PointerPressed {
-        position: PhysicalPosition<f64>,
+        position: Point,
         button: ButtonSource,
     },
     PointerReleased {
-        position: PhysicalPosition<f64>,
+        position: Point,
         button: ButtonSource,
     },
 

@@ -56,7 +56,13 @@ impl<Message: 'static> Widgets<Message> {
                 let id = *lut.get(&label).unwrap();
 
                 if let Some(mut widget) = widgets.remove(&id) {
-                    widget.child = root.child;
+                    widget.child = match widget.child {
+                        Some(child) => match root.child {
+                            Some(root_child) => Some(child.merge(root_child)),
+                            None => None,
+                        },
+                        None => root.child,
+                    };
 
                     // TODO reconfigure surface
                     self.widgets.insert(id, widget);
@@ -128,29 +134,16 @@ impl<Message: 'static> Widgets<Message> {
                 WindowEvent::ModifiersChanged(modifiers) => {
                     widget.handle_event(msg, Event::KeyModifiersChanged(modifiers.state()))?;
                 }
-                WindowEvent::PointerEntered {
-                    device_id: _,
-                    position: _,
-                    primary: _,
-                    kind: _,
-                } => {
-                    widget.handle_event(msg, Event::PointerEntered)?;
-                }
-                WindowEvent::PointerLeft {
-                    device_id: _,
-                    position: _,
-                    primary: _,
-                    kind: _,
-                } => {
-                    widget.handle_event(msg, Event::PointerLeft)?;
-                }
                 WindowEvent::PointerMoved {
                     device_id: _,
                     position,
                     primary: _,
                     source: _,
                 } => {
-                    widget.handle_event(msg, Event::PointerMoved(position))?;
+                    widget.handle_event(
+                        msg,
+                        Event::PointerMoved(Point::new(position.x, position.y)),
+                    )?;
                 }
                 WindowEvent::PointerButton {
                     device_id: _,
@@ -163,7 +156,7 @@ impl<Message: 'static> Widgets<Message> {
                         widget.handle_event(
                             msg,
                             Event::PointerPressed {
-                                position,
+                                position: Point::new(position.x, position.y),
                                 button,
                             },
                         )?;
@@ -172,7 +165,7 @@ impl<Message: 'static> Widgets<Message> {
                         widget.handle_event(
                             msg,
                             Event::PointerReleased {
-                                position,
+                                position: Point::new(position.x, position.y),
                                 button,
                             },
                         )?;
@@ -183,7 +176,17 @@ impl<Message: 'static> Widgets<Message> {
                     delta,
                     phase: _,
                 } => {
-                    widget.handle_event(msg, Event::PointerScrolled(delta))?;
+                    widget.handle_event(
+                        msg,
+                        Event::PointerScrolled(match delta {
+                            winit::event::MouseScrollDelta::LineDelta(x, y) => {
+                                MouseScrollDelta::LineDelta(x, y)
+                            }
+                            winit::event::MouseScrollDelta::PixelDelta(delta) => {
+                                MouseScrollDelta::PixelDelta(Vec2::new(delta.x, delta.y))
+                            }
+                        }),
+                    )?;
                 }
                 _ => {}
             }
