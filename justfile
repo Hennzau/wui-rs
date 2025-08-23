@@ -1,5 +1,5 @@
-build:
+b:
     cargo build
 
-ex example:
+x example:
     cargo run --example {{example}}

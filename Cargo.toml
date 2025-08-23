@@ -5,7 +5,7 @@ edition = "2024"
 homepage = "https://github.com/Hennzau/wui-rs"
 keywords = ["Wayland", "Graphics", "UI", "Elm", "GUI", "Rust", "MVC"]
 categories = []
-description = "Wayland User Interface framework with an MVC architecture."
+description = "Wayland User Interface framework on top of Xilem"
 documentation = "https://github.com/Hennzau/wui-rs"
 license = "Apache-2.0"
 repository = "https://github.com/Hennzau/wui-rs"
@@ -13,22 +13,10 @@ version = "0.1.0"
 readme = "README.md"
 
 [dependencies]
-eyre = "0.6"
-
-tokio = { version = "1", features = ["full"] }
-
-raw-window-handle = "0.6.2"
-
-smithay-client-toolkit = { version = "0.20.0", default-features = false, features = [
-    "xkbcommon",
-] }
-
-wayland-backend = { version = "0.3.11", features = ["client_system"] }
-
-vello = "0.5.0"
 tracing = "0.1.41"
 
-pollster = "0.4.0"
+xilem = { git = "https://github.com/Hennzau/xilem", version = "0.3.0" }
+winit = { git = "https://github.com/Hennzau/winit", version = "0.30.12" }
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
