@@ -27,7 +27,7 @@ pub trait Widget<Message>: Send + Sync + Any {
         Insets::ZERO
     }
 
-    fn hovered(&self) -> bool {
+    fn active(&self) -> bool {
         false
     }
 
@@ -71,8 +71,8 @@ impl<Message: 'static> Element<Message> {
         self.widget.insets()
     }
 
-    pub fn hovered(&self) -> bool {
-        self.widget.hovered()
+    pub fn active(&self) -> bool {
+        self.widget.active()
     }
 
     pub fn handle_event(&mut self, msg: &mut Vec<Message>, event: Event) -> Result<()> {

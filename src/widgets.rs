@@ -36,6 +36,7 @@ impl<Message: 'static> Widgets<Message> {
         let lut = self.lut.drain().collect::<HashMap<_, _>>();
         let mut widgets = self.widgets.drain().collect::<HashMap<_, _>>();
 
+        println!("Reconciliating {} roots", roots.len());
         for root in roots {
             let label = root.label.clone();
 

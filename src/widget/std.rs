@@ -1,6 +1,9 @@
 mod mouse;
 pub use mouse::*;
 
+mod keyboard;
+pub use keyboard::*;
+
 mod square;
 pub use square::*;
 

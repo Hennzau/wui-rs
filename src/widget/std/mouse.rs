@@ -5,15 +5,20 @@ use crate::*;
 pub struct Mouse<Message> {
     pub(crate) child: Element<Message>,
 
+    pub(crate) label: String,
+
     pub(crate) hovered: bool,
 
     pub(crate) on_enter: Option<Box<dyn Fn() -> Message + 'static + Send + Sync>>,
     pub(crate) on_leave: Option<Box<dyn Fn() -> Message + 'static + Send + Sync>>,
 
-    pub(crate) on_move: Option<Box<dyn Fn(Point) -> Message + 'static + Send + Sync>>,
-    pub(crate) on_press: Option<Box<dyn Fn(ButtonSource) -> Message + 'static + Send + Sync>>,
-    pub(crate) on_release: Option<Box<dyn Fn(ButtonSource) -> Message + 'static + Send + Sync>>,
-    pub(crate) on_scroll: Option<Box<dyn Fn(MouseScrollDelta) -> Message + 'static + Send + Sync>>,
+    pub(crate) on_move: Option<Box<dyn Fn(Point) -> Option<Message> + 'static + Send + Sync>>,
+    pub(crate) on_press:
+        Option<Box<dyn Fn(ButtonSource) -> Option<Message> + 'static + Send + Sync>>,
+    pub(crate) on_release:
+        Option<Box<dyn Fn(ButtonSource) -> Option<Message> + 'static + Send + Sync>>,
+    pub(crate) on_scroll:
+        Option<Box<dyn Fn(MouseScrollDelta) -> Option<Message> + 'static + Send + Sync>>,
 }
 
 impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
@@ -21,7 +26,7 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
         self.child.size()
     }
 
-    fn hovered(&self) -> bool {
+    fn active(&self) -> bool {
         self.hovered
     }
 
@@ -34,6 +39,7 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
                 }
             }
             Event::PointerLeft => {
+                println!("Pointer left");
                 self.hovered = false;
                 if let Some(on_leave) = &self.on_leave {
                     msg.push(on_leave());
@@ -42,7 +48,9 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
             Event::PointerMoved(position) => {
                 if self.hovered {
                     if let Some(on_move) = &self.on_move {
-                        msg.push(on_move(position));
+                        if let Some(message) = on_move(position) {
+                            msg.push(message);
+                        }
                     }
                 }
             }
@@ -52,7 +60,9 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
             } => {
                 if self.hovered {
                     if let Some(on_press) = &self.on_press {
-                        msg.push(on_press(button));
+                        if let Some(message) = on_press(button) {
+                            msg.push(message);
+                        }
                     }
                 }
             }
@@ -62,14 +72,18 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
             } => {
                 if self.hovered {
                     if let Some(on_release) = &self.on_release {
-                        msg.push(on_release(button));
+                        if let Some(message) = on_release(button) {
+                            msg.push(message);
+                        }
                     }
                 }
             }
             Event::PointerScrolled(delta) => {
                 if self.hovered {
                     if let Some(on_scroll) = &self.on_scroll {
-                        msg.push(on_scroll(delta));
+                        if let Some(message) = on_scroll(delta) {
+                            msg.push(message);
+                        }
                     }
                 }
             }
@@ -86,12 +100,26 @@ impl<Message: 'static + Send + Sync> Widget<Message> for Mouse<Message> {
     fn merge(self: Box<Self>, element: Element<Message>) -> Element<Message> {
         match element.downcast::<Self>() {
             Ok(mut element) => {
+                println!(
+                    "Mouse {} {} {} <- Mouse {} {} {}",
+                    element.label,
+                    element.size(),
+                    element.hovered,
+                    self.label,
+                    self.size(),
+                    self.hovered
+                );
+
                 element.hovered = self.hovered;
+
                 element.child = self.child.merge(element.child);
 
                 Element { widget: element }
             }
-            Err(element) => element,
+            Err(element) => {
+                println!("oiazjd");
+                element
+            }
         }
     }
 }
@@ -107,14 +135,17 @@ impl<Message> Mouse<Message> {
         self
     }
 
-    pub fn on_move(mut self, on_move: impl Fn(Point) -> Message + 'static + Send + Sync) -> Self {
+    pub fn on_move(
+        mut self,
+        on_move: impl Fn(Point) -> Option<Message> + 'static + Send + Sync,
+    ) -> Self {
         self.on_move = Some(Box::new(on_move));
         self
     }
 
     pub fn on_press(
         mut self,
-        on_press: impl Fn(ButtonSource) -> Message + 'static + Send + Sync,
+        on_press: impl Fn(ButtonSource) -> Option<Message> + 'static + Send + Sync,
     ) -> Self {
         self.on_press = Some(Box::new(on_press));
         self
@@ -122,7 +153,7 @@ impl<Message> Mouse<Message> {
 
     pub fn on_release(
         mut self,
-        on_release: impl Fn(ButtonSource) -> Message + 'static + Send + Sync,
+        on_release: impl Fn(ButtonSource) -> Option<Message> + 'static + Send + Sync,
     ) -> Self {
         self.on_release = Some(Box::new(on_release));
         self
@@ -130,16 +161,20 @@ impl<Message> Mouse<Message> {
 
     pub fn on_scroll(
         mut self,
-        on_scroll: impl Fn(MouseScrollDelta) -> Message + 'static + Send + Sync,
+        on_scroll: impl Fn(MouseScrollDelta) -> Option<Message> + 'static + Send + Sync,
     ) -> Self {
         self.on_scroll = Some(Box::new(on_scroll));
         self
     }
 }
 
-pub fn mouse<Message>(child: impl IntoElement<Message>) -> Mouse<Message> {
+pub fn mouse<Message>(
+    label: impl Into<String>,
+    child: impl IntoElement<Message>,
+) -> Mouse<Message> {
     Mouse {
         child: child.into_element(),
+        label: label.into(),
         hovered: false,
 
         on_enter: None,

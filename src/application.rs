@@ -88,7 +88,7 @@ where
             return;
         }
 
-        if let Err(e) = self.widgets.handle_event(&mut self.msg, id, event) {
+        if let Err(e) = self.widgets.handle_event(&mut self.msg, id, event.clone()) {
             println!("Error handling event: {}", e);
             event_loop.exit();
             return;
@@ -110,6 +110,7 @@ where
         }
 
         if updated {
+            println!("{:?}", event);
             self.rebuild_view(event_loop);
         }
 

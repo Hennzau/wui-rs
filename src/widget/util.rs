@@ -36,27 +36,13 @@ pub fn transform_handle_event<Message: 'static>(
         Event::PointerMoved(position) => {
             if child.size().to_rect().contains(position) {
                 child.handle_event(msg, Event::PointerMoved(position))?;
-                if !child.hovered() {
+                if !child.active() {
                     child.handle_event(msg, Event::PointerEntered)?;
                 }
             } else {
-                if child.hovered() {
+                if child.active() {
                     child.handle_event(msg, Event::PointerLeft)?;
                 }
-            }
-
-            Ok(())
-        }
-        Event::PointerPressed { position, button } => {
-            if child.size().to_rect().contains(position) {
-                child.handle_event(msg, Event::PointerPressed { position, button })?;
-            }
-
-            Ok(())
-        }
-        Event::PointerReleased { position, button } => {
-            if child.size().to_rect().contains(position) {
-                child.handle_event(msg, Event::PointerReleased { position, button })?;
             }
 
             Ok(())
