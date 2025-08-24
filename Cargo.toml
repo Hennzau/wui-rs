@@ -20,3 +20,4 @@ winit = { git = "https://github.com/Hennzau/winit", version = "0.30.12" }
 
 [dev-dependencies]
 tracing-subscriber = "0.3"
+chrono = "0.4"

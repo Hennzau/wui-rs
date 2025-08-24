@@ -3,54 +3,82 @@
 
 //! Flex properties can be set in Xilem.
 
+use std::time::Duration;
+
+use chrono::{DateTime, Local};
 use winit::dpi::LogicalSize;
 use winit::error::EventLoopError;
 use winit::platform::wayland::Anchor;
-use xilem::masonry::properties::types::AsUnit;
-use xilem::style::{Background, Style};
+use xilem::core::{MessageProxy, fork, lens};
+use xilem::masonry::parley::{FontFamily, FontStack, GenericFamily};
+use xilem::masonry::properties::types::{AsUnit, Length};
+use xilem::style::{Background, Padding, Style};
+use xilem::tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use xilem::tokio::time::Instant;
 use xilem::view::{
-    CrossAxisAlignment, FlexExt as _, FlexSpacer, Label, MainAxisAlignment, button, flex_row,
-    label, sized_box,
+    CrossAxisAlignment, Flex, FlexExt as _, FlexSpacer, Label, MainAxisAlignment, button, flex_row,
+    label, sized_box, worker, zstack,
 };
-use xilem::{EventLoop, WidgetView, WindowOptions, Xilem, palette};
+use xilem::{EventLoop, FontWeight, WidgetView, WindowOptions, Xilem, palette, tokio};
 
-/// A component to make a bigger than usual button
-fn big_button(
-    label: impl Into<Label>,
-    callback: impl Fn(&mut i32) + Send + Sync + 'static,
-) -> impl WidgetView<i32> {
-    sized_box(button(label, callback))
-        .width(40.px())
-        .height(40.px())
+struct AppState {
+    time: DateTime<Local>,
 }
 
-fn app_logic(data: &mut i32) -> impl WidgetView<i32> + use<> {
+fn time_button(time: &mut DateTime<Local>) -> impl WidgetView<DateTime<Local>> + use<> {
+    button(
+        label(time.format("%b %d  %H:%M").to_string()).weight(FontWeight::EXTRA_BOLD),
+        |_: &mut DateTime<Local>| {
+            println!("Time button clicked");
+        },
+    )
+    .padding(Padding::all(2.0))
+    .background_color(palette::css::TRANSPARENT)
+    .active_background_color(palette::css::LIGHT_GRAY.with_alpha(0.4))
+    .hovered_border_color(palette::css::GRAY)
+}
+
+fn time(time: &mut DateTime<Local>) -> impl WidgetView<DateTime<Local>> + use<> {
+    fork(
+        time_button(time),
+        worker(
+            async |proxy: MessageProxy<DateTime<Local>>, _: UnboundedReceiver<()>| {
+                loop {
+                    tokio::time::sleep(Duration::from_secs(15)).await;
+
+                    proxy
+                        .message(Local::now())
+                        .expect("Failed to send time update");
+                }
+            },
+            |_: &mut DateTime<Local>, _: UnboundedSender<()>| {},
+            |time: &mut DateTime<Local>, new_time: DateTime<Local>| {
+                *time = new_time;
+            },
+        ),
+    )
+}
+
+fn app_logic(_: &mut AppState) -> impl WidgetView<AppState> + use<> {
     flex_row((
-        FlexSpacer::Fixed(30.px()),
-        big_button("-", |data| {
-            *data -= 1;
-        }),
-        FlexSpacer::Flex(1.0),
-        label(format!("count: {data}")).text_size(32.).flex(5.0),
-        FlexSpacer::Flex(1.0),
-        big_button("+", |data| {
-            *data += 1;
-        }),
-        FlexSpacer::Fixed(30.px()),
+        (FlexSpacer::Fixed(2.px()), label("activites")),
+        lens(time, |state: &mut AppState| &mut state.time),
+        (label("system"), FlexSpacer::Fixed(2.px())),
     ))
     .cross_axis_alignment(CrossAxisAlignment::Center)
-    .main_axis_alignment(MainAxisAlignment::Center)
-    .background(Background::Color(palette::css::ALICE_BLUE))
+    .main_axis_alignment(MainAxisAlignment::SpaceBetween)
+    .background(Background::Color(palette::css::BLACK))
 }
 
 fn main() -> Result<(), EventLoopError> {
     let app = Xilem::new_simple(
-        0,
+        AppState { time: Local::now() },
         app_logic,
-        WindowOptions::new("Centered Flex")
+        WindowOptions::new("bar.top")
             .with_layer_shell()
             .with_anchor(Anchor::TOP)
-            .with_initial_inner_size(LogicalSize::new(1920, 360).to_physical::<u32>(1.11111)),
+            .with_initial_inner_size(LogicalSize::new(1920, 24).to_physical::<u32>(1.11111))
+            .with_exclusive_zone(24),
     );
     app.run_in(EventLoop::builder())?;
     Ok(())
